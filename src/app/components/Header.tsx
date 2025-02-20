@@ -1,7 +1,7 @@
 "use client";
 
-import { FaClipboardList } from "react-icons/fa";
 import { useAuth } from "../context/AuthContext";
+import { FaCloud } from "react-icons/fa6";
 
 export const Header = () => {
   const { user, handleSignOut, signInWithGoogle } = useAuth();
@@ -10,7 +10,7 @@ export const Header = () => {
     <header className="sticky top-0 z-50 border-b border-white/10 bg-neutral-900/80 backdrop-blur-sm">
       <div className="flex items-center justify-between p-4">
         <h1 className="text-2xl font-bold gap-1 flex justify-center items-center text-white/90">
-          OpenBoard<FaClipboardList />
+          CloudBoard<FaCloud />
         </h1>
         <div className="flex items-center gap-4">
           {user ? (
