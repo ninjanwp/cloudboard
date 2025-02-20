@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kanban Board",
-  description: "A simple Kanban board built with Next.js and Firebase",
+  title: "CloudBoard",
+  description: "A simple Kanban board built with Next.js, Tailwind.css, and Firebase",
 };
 
 export default function RootLayout({

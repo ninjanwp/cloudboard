@@ -11,15 +11,9 @@ import React, {
 import {
   FiPlus,
   FiTrash,
-  FiEdit,
-  FiStar,
-  FiFlag,
-  FiBell,
 } from "react-icons/fi";
-import { FaGraduationCap } from "react-icons/fa";
 import { motion } from "framer-motion";
-import { FaFire } from "react-icons/fa";
-import { auth, db } from "../../../firebase";
+import { db } from "../../../firebase";
 import {
   collection,
   onSnapshot,
@@ -345,14 +339,14 @@ const Column = ({
             />
           </React.Fragment>
         ))}
-        <AddCard column={column} setCards={setCards} cards={cards} />
+        <AddCard column={column} cards={cards} />
       </div>
     </div>
   );
 };
 
 type CardProps = CardType & {
-  handleDragStart: Function;
+  handleDragStart: (e: DragEvent, card: CardType) => void;
   updateCard: (cardId: string, data: Partial<CardType>) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
 };
@@ -389,7 +383,7 @@ const Card = ({
         layoutId={id}
         draggable="true"
         onClick={handleCardClick}
-        onDragStart={(e) => handleDragStart(e, { title, id, column })}
+        onDragStart={(e) => handleDragStart(e as unknown as DragEvent, { title, id, column, createdAt, icon, createdBy })}
         className="cursor-grab rounded border border-neutral-700 bg-neutral-800 p-3 hover:border-neutral-600 active:cursor-grabbing"
       >
         <div className="flex justify-between items-start">
@@ -586,7 +580,7 @@ const CardEdit = ({ card, onClose, updateCard, deleteCard }: CardEditProps) => {
       ]);
       setNewLinkUrl("");
       setNewLinkTitle("");
-    } catch (e) {
+    } catch {
       alert("Please enter a valid URL");
     }
   };
@@ -773,11 +767,10 @@ const DropIndicator = ({ beforeId, column }: DropIndicatorProps) => {
 
 type AddCardProps = {
   column: ColumnType;
-  setCards: Dispatch<SetStateAction<CardType[]>>;
   cards: CardType[]; // Add this
 };
 
-const AddCard = ({ column, setCards, cards }: AddCardProps) => {
+const AddCard = ({ column, cards }: AddCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [text, setText] = useState("");
   const [description, setDescription] = useState("");

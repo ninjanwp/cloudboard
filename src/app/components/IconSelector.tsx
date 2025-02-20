@@ -45,7 +45,7 @@ export const IconSelector = ({
                     : "border-neutral-700"
                 }`}
               >
-                <IconComponent className="text-neutral-400" />
+                <IconComponent/>
               </button>
             );
           })}
