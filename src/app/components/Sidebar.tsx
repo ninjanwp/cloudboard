@@ -21,6 +21,7 @@ import {
 import { Modal } from "./Modal";
 import { IconSelector } from "./IconSelector";
 import * as FaIcons from "react-icons/fa6";
+import { useProject } from "../context/ProjectContext";
 
 type ProjectType = {
   id: string;
@@ -30,13 +31,13 @@ type ProjectType = {
   icon?: string;
 };
 
+type IconProps = {
+  className?: string;
+};
+
 export const Sidebar = ({
-  onProjectSelect,
-  activeProjectId,
   onCollapsedChange,
 }: {
-  onProjectSelect: (projectId: string, boardId: string) => void;
-  activeProjectId: string | null;
   onCollapsedChange: (collapsed: boolean) => void;
 }) => {
   const {
@@ -47,11 +48,12 @@ export const Sidebar = ({
     leaveProject,
     removeUserFromProject,
   } = useAuth();
+  const { selectedProjectId, handleProjectSelect } = useProject();
   const [projects, setProjects] = useState<ProjectType[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [inviteProjectId, setInviteProjectId] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [projectIcon, setProjectIcon] = useState("FaStar");
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -103,11 +105,11 @@ export const Sidebar = ({
       "Inviting user with email:",
       inviteEmail,
       "to project:",
-      selectedProjectId
-    ); // Add logging
-    await inviteUserToProject(selectedProjectId, inviteEmail);
+      inviteProjectId
+    );
+    await inviteUserToProject(inviteProjectId, inviteEmail);
     setInviteEmail("");
-    console.log("User invited successfully"); // Add logging
+    console.log("User invited successfully");
   };
 
   const handleDeleteProject = async (
@@ -136,8 +138,8 @@ export const Sidebar = ({
         await leaveProject(projectId);
         setActiveMenu(null);
         // Optionally, clear the selected project if it's the one being left
-        if (activeProjectId === projectId) {
-          onProjectSelect("", "");
+        if (selectedProjectId === projectId) {
+          handleProjectSelect("", "");
         }
       } catch (error) {
         console.error("Error leaving project:", error);
@@ -223,11 +225,11 @@ export const Sidebar = ({
           <div key={project.id} className="relative">
             <div
               className={`p-4 flex justify-between items-center cursor-pointer transition-colors ${
-                activeProjectId === project.id
+                selectedProjectId === project.id
                   ? "bg-blue-950 border-blue-500 font-medium"
                   : "hover:bg-neutral-800 border-b-neutral-700"
               }`}
-              onClick={() => onProjectSelect(project.id, "default-board-id")}
+              onClick={() => handleProjectSelect(project.id, "default-board-id")}
             >
               {isCollapsed ? (
                 <motion.span
@@ -235,10 +237,10 @@ export const Sidebar = ({
                   animate={{ opacity: 1 }}
                   className="w-full h-full flex items-center justify-center"
                 >
-                  {project.icon && (FaIcons as any)[project.icon] ? (
+                  {project.icon && (FaIcons as Record<string, React.ComponentType<IconProps>>)[project.icon] ? (
                     <span className="w-8 h-8 flex items-center justify-center">
-                      {React.createElement((FaIcons as any)[project.icon], {
-                        className: "w-8 h-8",
+                      {React.createElement((FaIcons as Record<string, React.ComponentType<IconProps>>)[project.icon], {
+                        className: "w-8 h-8"
                       })}
                     </span>
                   ) : (
@@ -254,9 +256,9 @@ export const Sidebar = ({
                   className="flex justify-between items-center w-full min-w-0"
                 >
                   <div className="flex items-center gap-3 truncate">
-                    {project.icon && (FaIcons as any)[project.icon] ? (
+                    {project.icon && (FaIcons as Record<string, React.ComponentType<IconProps>>)[project.icon] ? (
                       <span className="w-8 h-8 flex items-center justify-center">
-                        {React.createElement((FaIcons as any)[project.icon], {
+                        {React.createElement((FaIcons as Record<string, React.ComponentType<IconProps>>)[project.icon], {
                           className: "w-8 h-8",
                         })}
                       </span>
@@ -296,7 +298,7 @@ export const Sidebar = ({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSelectedProjectId(project.id);
+                    setInviteProjectId(project.id);
                     setActiveMenu(null);
                   }}
                   className="block w-full text-left px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-700"
@@ -350,10 +352,10 @@ export const Sidebar = ({
           </button>
         </div>
       </Modal>
-      {selectedProjectId && (
+      {inviteProjectId && (
         <Modal
-          isOpen={!!selectedProjectId}
-          onClose={() => setSelectedProjectId("")}
+          isOpen={!!inviteProjectId}
+          onClose={() => setInviteProjectId("")}
         >
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-neutral-100">
@@ -431,7 +433,7 @@ export const Sidebar = ({
                 <button
                   onClick={() => {
                     if (configProject) {
-                      setSelectedProjectId(configProject.id);
+                      setInviteProjectId(configProject.id);
                     }
                     setIsConfigModalOpen(false);
                   }}

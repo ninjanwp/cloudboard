@@ -81,7 +81,7 @@ export const SignInModal = ({ isOpen, onClose }: SignInModalProps) => {
                 }}
                 className="w-full rounded-lg text-neutral-400 p-2 hover:text-neutral-50"
               >
-                Don't have an account? Sign Up
+                Don&apos;t have an account? Sign Up
               </button>
             </div>
           </form>

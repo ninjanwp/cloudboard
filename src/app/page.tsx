@@ -1,17 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { CustomKanban } from "./components/CustomKanban";
-import { useAuth } from "./context/AuthContext";
+import { useProject } from "./context/ProjectContext";
 
-export default function Home({
-  selectedProjectId,
-  selectedBoardId,
-}: {
-  selectedProjectId: string | null;
-  selectedBoardId: string | null;
-}) {
-  const { user } = useAuth();
+export default function Home() {
+  const { selectedProjectId, selectedBoardId } = useProject();
 
   return (
     <div className="text-white h-screen flex flex-col">

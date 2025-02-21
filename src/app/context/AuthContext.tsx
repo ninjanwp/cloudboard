@@ -21,7 +21,6 @@ import {
   query,
   where,
   onSnapshot,
-  deleteDoc,
   getDocs,
   writeBatch,
 } from "firebase/firestore";

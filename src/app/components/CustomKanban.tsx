@@ -446,7 +446,6 @@ const Card = ({ ...props }: CardProps) => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const { user } = useAuth();
 
   const handleCardClick = () => {
     setIsEditing(false);
@@ -456,30 +455,6 @@ const Card = ({ ...props }: CardProps) => {
   const IconComponent =
     iconOptions.find((option) => option.name === props.icon)?.icon ||
     FaIcons.FaStar;
-
-  const handleAcceptTask = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!user?.email) return;
-
-    const currentAssignment = props.assignment || {
-      type: "open",
-      assignedTo: [],
-      acceptedBy: [],
-    };
-
-    const currentAcceptedBy = Array.isArray(currentAssignment.acceptedBy)
-      ? currentAssignment.acceptedBy
-      : [];
-
-    await props.updateCard(props.id, {
-      assignment: {
-        type: "open",
-        assignedTo: currentAssignment.assignedTo || [],
-        acceptedBy: [...currentAcceptedBy, user.email],
-        assignedAt: new Date().toISOString(),
-      },
-    });
-  };
 
   return (
     <>
@@ -750,8 +725,9 @@ const CardOverview = ({
         ) : (
           <div className="flex flex-col gap-2">
             {Array.isArray(card.assignment?.acceptedBy) &&
-            card.assignment?.acceptedBy.filter((email) => isMemberActive(email))
-              .length > 0 ? (
+            card.assignment?.acceptedBy.filter((email) =>
+              isMemberActive(email)
+            ).length > 0 ? (
               <div className="space-y-2">
                 <p className="text-sm text-neutral-400">Team:</p>
                 <div className="flex flex-wrap gap-2">
@@ -840,13 +816,6 @@ const CardEdit = ({
   const [assignmentType, setAssignmentType] = useState<"assigned" | "open">(
     card.assignment?.type || "open"
   );
-  const [assignedTo, setAssignedTo] = useState(
-    card.assignment?.assignedTo
-      ? Array.isArray(card.assignment.assignedTo)
-        ? card.assignment.assignedTo[0]
-        : card.assignment.assignedTo
-      : ""
-  );
   const { user } = useAuth();
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
   const [assignedMembers, setAssignedMembers] = useState<string[]>(
@@ -875,7 +844,7 @@ const CardEdit = ({
     e.preventDefault();
 
     // Create assignment object based on type
-    let assignment: CardType["assignment"] = {
+    const assignment: CardType["assignment"] = {
       type: assignmentType,
       assignedTo: assignmentType === "assigned" ? assignedMembers : [],
       acceptedBy: Array.isArray(card.assignment?.acceptedBy)
