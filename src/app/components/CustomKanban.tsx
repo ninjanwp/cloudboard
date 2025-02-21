@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation"; // Change this import
 import React, {
   Dispatch,
   SetStateAction,
@@ -8,10 +9,7 @@ import React, {
   FormEvent,
   useEffect,
 } from "react";
-import {
-  FiPlus,
-  FiTrash,
-} from "react-icons/fi";
+import { FiPlus, FiTrash } from "react-icons/fi";
 import { motion } from "framer-motion";
 import { db } from "../../../firebase";
 import {
@@ -20,6 +18,7 @@ import {
   setDoc,
   doc,
   deleteDoc,
+  getDoc,
 } from "firebase/firestore";
 import { Modal } from "./Modal";
 import { useAuth } from "../context/AuthContext";
@@ -33,8 +32,49 @@ const iconOptions = Object.keys(FaIcons).map((key) => ({
   icon: (FaIcons as { [key: string]: React.ComponentType })[key],
 }));
 
-export const CustomKanban = () => {
+export const CustomKanban = ({
+  projectId,
+  boardId,
+}: {
+  projectId: string;
+  boardId: string;
+}) => {
   const { user } = useAuth();
+  const [projectError, setProjectError] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkProjectAccess = async () => {
+      if (!projectId) return;
+
+      try {
+        const projectRef = doc(db, "projects", projectId);
+        const projectSnap = await getDoc(projectRef);
+
+        if (
+          !projectSnap.exists() ||
+          !projectSnap.data().members.includes(user?.email)
+        ) {
+          setProjectError(true);
+          router.push("/projects");
+        }
+      } catch (error) {
+        console.error("Error checking project access:", error);
+        setProjectError(true);
+        router.push("/projects");
+      }
+    };
+
+    checkProjectAccess();
+  }, [projectId, user?.email, router]);
+
+  if (projectError) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <p className="text-neutral-400">This project is no longer accessible</p>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -47,17 +87,26 @@ export const CustomKanban = () => {
   }
 
   return (
-    <div className="w-full">
-      <Board userId={user.uid} />
+    <div className="w-full h-screen overflow-auto">
+      <Board projectId={projectId} boardId={boardId} />
     </div>
   );
 };
 
-const Board = ({ userId }: { userId: string }) => {
+const Board = ({
+  projectId,
+  boardId,
+}: {
+  projectId: string;
+  boardId: string;
+}) => {
   const [cards, setCards] = useState<CardType[]>([]);
 
   useEffect(() => {
-    const cardsRef = collection(db, `users/${userId}/cards`);
+    const cardsRef = collection(
+      db,
+      `projects/${projectId}/boards/${boardId}/cards`
+    );
     const unsubscribe = onSnapshot(cardsRef, (snapshot) => {
       const cardsData: CardType[] = [];
       snapshot.forEach((doc) => {
@@ -67,12 +116,12 @@ const Board = ({ userId }: { userId: string }) => {
     });
 
     return () => unsubscribe();
-  }, [userId]);
+  }, [projectId, boardId]);
 
   const updateCard = async (cardId: string, data: Partial<CardType>) => {
     try {
       await setDoc(
-        doc(db, `users/${userId}/cards`, cardId),
+        doc(db, `projects/${projectId}/boards/${boardId}/cards`, cardId),
         {
           ...data,
           lastModified: new Date().toISOString(),
@@ -85,7 +134,9 @@ const Board = ({ userId }: { userId: string }) => {
   };
 
   const deleteCard = async (cardId: string) => {
-    await deleteDoc(doc(db, `users/${userId}/cards`, cardId));
+    await deleteDoc(
+      doc(db, `projects/${projectId}/boards/${boardId}/cards`, cardId)
+    );
   };
 
   return (
@@ -99,6 +150,8 @@ const Board = ({ userId }: { userId: string }) => {
           setCards={setCards}
           updateCard={updateCard}
           deleteCard={deleteCard}
+          projectId={projectId} // Add this
+          boardId={boardId} // Add this
         />
         <Column
           title="To Do"
@@ -108,6 +161,8 @@ const Board = ({ userId }: { userId: string }) => {
           setCards={setCards}
           updateCard={updateCard}
           deleteCard={deleteCard}
+          projectId={projectId} // Add this
+          boardId={boardId} // Add this
         />
 
         <Column
@@ -118,6 +173,8 @@ const Board = ({ userId }: { userId: string }) => {
           setCards={setCards}
           updateCard={updateCard}
           deleteCard={deleteCard}
+          projectId={projectId} // Add this
+          boardId={boardId} // Add this
         />
 
         <Column
@@ -128,6 +185,8 @@ const Board = ({ userId }: { userId: string }) => {
           setCards={setCards}
           updateCard={updateCard}
           deleteCard={deleteCard}
+          projectId={projectId} // Add this
+          boardId={boardId} // Add this
         />
       </div>
     </div>
@@ -142,6 +201,8 @@ type ColumnProps = {
   setCards: Dispatch<SetStateAction<CardType[]>>;
   updateCard: (cardId: string, data: Partial<CardType>) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
+  projectId: string; // Add this
+  boardId: string; // Add this
 };
 
 const colorMap: { [key: string]: string } = {
@@ -159,6 +220,8 @@ const Column = ({
   setCards,
   updateCard,
   deleteCard,
+  projectId, // Add this
+  boardId, // Add this
 }: ColumnProps) => {
   const [active, setActive] = useState(false);
 
@@ -332,6 +395,7 @@ const Column = ({
               handleDragStart={handleDragStart}
               updateCard={updateCard}
               deleteCard={deleteCard}
+              projectId={projectId}
             />
             <DropIndicator
               beforeId={filteredCards[index + 1]?.id || null}
@@ -339,7 +403,12 @@ const Column = ({
             />
           </React.Fragment>
         ))}
-        <AddCard column={column} cards={cards} />
+        <AddCard
+          column={column}
+          cards={cards}
+          projectId={projectId}
+          boardId={boardId}
+        />
       </div>
     </div>
   );
@@ -349,24 +418,35 @@ type CardProps = CardType & {
   handleDragStart: (e: DragEvent, card: CardType) => void;
   updateCard: (cardId: string, data: Partial<CardType>) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
+  projectId: string;
 };
 
-const Card = ({
-  title,
-  id,
-  column,
-  description,
-  createdBy,
-  createdAt,
-  priority,
-  icon,
-  links,
-  handleDragStart,
-  updateCard,
-  deleteCard,
-}: CardProps) => {
+const Card = ({ ...props }: CardProps) => {
+  const [projectMembers, setProjectMembers] = useState<string[]>([]);
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchProjectMembers = async () => {
+      try {
+        const projectRef = doc(db, "projects", props.projectId);
+        const projectSnap = await getDoc(projectRef);
+        if (projectSnap.exists()) {
+          setProjectMembers(projectSnap.data().members || []);
+        } else {
+          // Project was deleted
+          router.push("/projects");
+        }
+      } catch (error) {
+        console.error("Error fetching project members:", error);
+        router.push("/projects");
+      }
+    };
+    fetchProjectMembers();
+  }, [props.projectId, router]);
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const { user } = useAuth();
 
   const handleCardClick = () => {
     setIsEditing(false);
@@ -374,35 +454,69 @@ const Card = ({
   };
 
   const IconComponent =
-    iconOptions.find((option) => option.name === icon)?.icon || FaIcons.FaStar;
+    iconOptions.find((option) => option.name === props.icon)?.icon ||
+    FaIcons.FaStar;
+
+  const handleAcceptTask = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user?.email) return;
+
+    const currentAssignment = props.assignment || {
+      type: "open",
+      assignedTo: [],
+      acceptedBy: [],
+    };
+
+    const currentAcceptedBy = Array.isArray(currentAssignment.acceptedBy)
+      ? currentAssignment.acceptedBy
+      : [];
+
+    await props.updateCard(props.id, {
+      assignment: {
+        type: "open",
+        assignedTo: currentAssignment.assignedTo || [],
+        acceptedBy: [...currentAcceptedBy, user.email],
+        assignedAt: new Date().toISOString(),
+      },
+    });
+  };
 
   return (
     <>
       <motion.div
         layout
-        layoutId={id}
+        layoutId={props.id}
         draggable="true"
         onClick={handleCardClick}
-        onDragStart={(e) => handleDragStart(e as unknown as DragEvent, { title, id, column, createdAt, icon, createdBy })}
+        onDragStart={(e) =>
+          props.handleDragStart(e as unknown as DragEvent, {
+            title: props.title,
+            id: props.id,
+            column: props.column,
+            createdAt: props.createdAt,
+            icon: props.icon,
+            createdBy: props.createdBy,
+          })
+        }
         className="cursor-grab rounded border border-neutral-700 bg-neutral-800 p-3 hover:border-neutral-600 active:cursor-grabbing"
       >
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">
             <IconComponent className="text-neutral-100 font-bold text-2xl" />
-            <p className="text-xl font-bold text-neutral-100">{title}</p>
+            <p className="text-xl font-bold text-neutral-100">{props.title}</p>
           </div>
           <p className="text-sm text-neutral-400 capitalize">
-            {priority && <Badge priority={priority} />}
+            {props.priority && <Badge priority={props.priority} />}
           </p>
         </div>
-        {description && (
+        {props.description && (
           <p className="mt-2 line-clamp-5 text-xs text-neutral-400 whitespace-pre-wrap">
-            {description}
+            {props.description}
           </p>
         )}
-        {links && links.length > 0 && (
+        {props.links && props.links.length > 0 && (
           <div className="mt-2 space-y-1 w-min">
-            {links.map((link, index) => (
+            {props.links.map((link, index) => (
               <a
                 key={index}
                 href={link.url}
@@ -417,9 +531,39 @@ const Card = ({
             ))}
           </div>
         )}
+        <div className="mt-2 flex items-center justify-between text-xs">
+          <div className="text-neutral-400">
+            {props.assignment?.type === "assigned" && (
+              <span className="font-bold">
+                Assigned to:{" "}
+                <span className="text-blue-400">
+                  {Array.isArray(props.assignment.assignedTo)
+                    ? props.assignment.assignedTo
+                        .filter((email) => projectMembers.includes(email))
+                        .join(", ")
+                    : props.assignment.assignedTo}
+                </span>
+              </span>
+            )}
+            {(props.assignment?.acceptedBy ?? []).filter((email) =>
+              projectMembers.includes(email)
+            ).length > 0 && (
+              <span className="font-bold">
+                Team:{" "}
+                <span className="text-blue-400">
+                  {Array.isArray(props.assignment?.acceptedBy)
+                    ? props.assignment?.acceptedBy
+                        ?.filter((email) => projectMembers.includes(email))
+                        .join(", ")
+                    : props.assignment?.acceptedBy ?? []}
+                </span>
+              </span>
+            )}
+          </div>
+        </div>
         <div className="mt-2 text-xs flex flex-col gap-1 text-neutral-500">
-          <p>Created on: {new Date(createdAt).toLocaleDateString()}</p>
-          <p>Posted by: {createdBy.email}</p>
+          <p>Posted: {new Date(props.createdAt).toLocaleDateString()}</p>
+          {/* <p>Posted by: {props.createdBy.email}</p> */}
         </div>
       </motion.div>
 
@@ -427,37 +571,42 @@ const Card = ({
         {isEditing ? (
           <CardEdit
             card={{
-              title,
-              id,
-              column,
-              description,
-              createdBy,
-              createdAt,
-              priority,
-              icon,
-              links,
+              title: props.title,
+              id: props.id,
+              column: props.column,
+              description: props.description,
+              createdBy: props.createdBy,
+              createdAt: props.createdAt,
+              priority: props.priority,
+              icon: props.icon,
+              links: props.links,
+              assignment: props.assignment,
             }}
             onClose={() => {
               setIsEditing(false);
               setIsModalOpen(false);
             }}
-            updateCard={updateCard}
-            deleteCard={deleteCard}
+            updateCard={props.updateCard}
+            deleteCard={props.deleteCard}
+            projectId={props.projectId} // Add this
           />
         ) : (
           <CardOverview
             card={{
-              title,
-              id,
-              column,
-              description,
-              createdBy,
-              createdAt,
-              priority,
-              icon,
-              links,
+              title: props.title,
+              id: props.id,
+              column: props.column,
+              description: props.description,
+              createdBy: props.createdBy,
+              createdAt: props.createdAt,
+              priority: props.priority,
+              icon: props.icon,
+              links: props.links,
+              assignment: props.assignment,
             }}
             onEdit={() => setIsEditing(true)}
+            updateCard={props.updateCard}
+            projectId={props.projectId}
           />
         )}
       </Modal>
@@ -465,55 +614,191 @@ const Card = ({
   );
 };
 
+type CardOverviewProps = {
+  card: CardType;
+  onEdit: () => void;
+  updateCard: (cardId: string, data: Partial<CardType>) => Promise<void>;
+  projectId: string;
+};
+
 const CardOverview = ({
   card,
   onEdit,
-}: {
-  card: CardType;
-  onEdit: () => void;
-}) => {
+  updateCard,
+  projectId,
+}: CardOverviewProps) => {
+  const { user } = useAuth();
+  const [projectMembers, setProjectMembers] = useState<string[]>([]);
+  const router = useRouter();
+  const isCreator = user?.email === card.createdBy.email;
+
+  useEffect(() => {
+    const fetchProjectMembers = async () => {
+      try {
+        const projectRef = doc(db, "projects", projectId);
+        const projectSnap = await getDoc(projectRef);
+        if (projectSnap.exists()) {
+          setProjectMembers(projectSnap.data().members || []);
+        } else {
+          router.push("/projects");
+        }
+      } catch (error) {
+        console.error("Error fetching project members:", error);
+        router.push("/projects");
+      }
+    };
+    fetchProjectMembers();
+  }, [projectId, router]);
+
+  const isMemberActive = (email: string) => {
+    return projectMembers.includes(email);
+  };
+
+  const handleAcceptTask = async () => {
+    if (!user?.email) return;
+
+    // Initialize arrays properly
+    const currentAssignment = card.assignment || {
+      type: "open",
+      assignedTo: [],
+      acceptedBy: [],
+    };
+
+    const currentAcceptedBy = Array.isArray(currentAssignment.acceptedBy)
+      ? currentAssignment.acceptedBy
+      : [];
+
+    if (currentAcceptedBy.includes(user.email)) return;
+
+    try {
+      await updateCard(card.id, {
+        assignment: {
+          type: "open",
+          assignedTo: currentAssignment.assignedTo || [],
+          acceptedBy: [...currentAcceptedBy, user.email],
+          assignedAt: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      console.error("Error accepting task:", error);
+    }
+  };
+
+  const handleAbandonTask = async () => {
+    if (!user?.email) return;
+
+    const currentAcceptedBy = card.assignment?.acceptedBy || [];
+
+    if (confirm("Are you sure you want to abandon this task?")) {
+      await updateCard(card.id, {
+        assignment: {
+          type: "open",
+          assignedTo: card.assignment?.assignedTo || [],
+          acceptedBy: currentAcceptedBy.filter((email) => email !== user.email),
+          assignedAt: new Date().toISOString(),
+        },
+      });
+    }
+  };
+
   const IconComponent =
     iconOptions.find((option) => option.name === card.icon)?.icon ||
     FaIcons.FaStar;
+
   return (
     <div className="space-y-8 p-4">
-      <div className="flex justify-start gap-2 items-center">
-        <IconComponent className="text-neutral-100 text-4xl" />
-        <h2 className="text-4xl font-bold text-neutral-100">{card.title}</h2>
-        <button
-          onClick={onEdit}
-          className="text-neutral-400 flex gap-2 justify-center items-center text-2xl hover:text-neutral-100"
-        >
-          <FaIcons.FaPen />
-        </button>
-      </div>
-      <div className="flex items-center gap-2 capitalize">
-        {card.priority && <Badge priority={card.priority} />}
-      </div>
-      <div>
-        <p className="text-neutral-100 whitespace-pre-wrap">
-          {card.description || "No description"}
-        </p>
-      </div>
-      {card.links && card.links.length > 0 && (
-        <div className="space-y-2 w-min">
-          <h3 className="text-sm font-medium text-neutral-300">Links</h3>
-          <div className="space-y-1">
-            {card.links.map((link, index) => (
-              <a
-                key={index}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm truncate"
-              >
-                <FaIcons.FaLink className="text-[10px]" />
-                {link.title || link.url}
-              </a>
-            ))}
-          </div>
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <IconComponent className="text-neutral-100 text-4xl" />
+          <h2 className="text-4xl font-bold text-neutral-100">{card.title}</h2>
         </div>
-      )}
+        {isCreator && (
+          <button
+            onClick={onEdit}
+            className="text-neutral-400 flex gap-2 justify-center items-center text-2xl hover:text-neutral-100"
+          >
+            <FaIcons.FaPen />
+          </button>
+        )}
+      </div>
+
+      {/* Priority and other existing sections */}
+      {/* ...existing code... */}
+
+      {/* Assignment Section */}
+      <div className="border-t border-neutral-700 pt-4">
+        <p className="text-sm font-medium text-neutral-300 mb-2">
+          {card.description}
+        </p>
+        {card.assignment?.type === "assigned" ? (
+          <div className="space-y-2">
+            <p className="text-sm text-neutral-400">Assigned to:</p>
+            <div className="flex flex-wrap gap-2">
+              {Array.isArray(card.assignment.assignedTo) &&
+                card.assignment.assignedTo
+                  .filter((email) => isMemberActive(email))
+                  .map((email) => (
+                    <span
+                      key={email}
+                      className="px-2 py-1 bg-neutral-700 rounded text-neutral-100"
+                    >
+                      {email}
+                    </span>
+                  ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {Array.isArray(card.assignment?.acceptedBy) &&
+            card.assignment?.acceptedBy.filter((email) => isMemberActive(email))
+              .length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm text-neutral-400">Team:</p>
+                <div className="flex flex-wrap gap-2">
+                  {card.assignment.acceptedBy
+                    .filter((email) => isMemberActive(email))
+                    .map((email) => (
+                      <span
+                        key={email}
+                        className="px-2 py-1 bg-neutral-700 rounded text-neutral-100"
+                      >
+                        {email}
+                      </span>
+                    ))}
+                </div>
+                {card.assignment.acceptedBy.includes(user?.email || "") ? (
+                  <button
+                    onClick={handleAbandonTask}
+                    className="w-full p-2 bg-red-500 rounded text-white hover:bg-red-600"
+                  >
+                    Leave Task
+                  </button>
+                ) : (
+                  user?.email && (
+                    <button
+                      onClick={handleAcceptTask}
+                      className="w-full p-2 bg-blue-500 rounded text-white hover:bg-blue-600"
+                    >
+                      Join Task
+                    </button>
+                  )
+                )}
+              </div>
+            ) : (
+              user?.email && (
+                <button
+                  onClick={handleAcceptTask}
+                  className="w-full p-2 bg-blue-500 rounded text-white hover:bg-blue-600"
+                >
+                  Join Task
+                </button>
+              )
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Creator info section */}
       <div className="text-xs text-neutral-500">
         <p>Created by: {card.createdBy.email}</p>
         <p>
@@ -527,14 +812,22 @@ const CardOverview = ({
   );
 };
 
+// Update CardEditProps interface to include projectId
 interface CardEditProps {
   card: CardType;
   onClose: () => void;
   updateCard: (cardId: string, data: Partial<CardType>) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
+  projectId: string; // Add this
 }
 
-const CardEdit = ({ card, onClose, updateCard, deleteCard }: CardEditProps) => {
+const CardEdit = ({
+  card,
+  onClose,
+  updateCard,
+  deleteCard,
+  projectId,
+}: CardEditProps) => {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || "");
   const [priority, setPriority] = useState<Priority | "">(card.priority || "");
@@ -544,6 +837,32 @@ const CardEdit = ({ card, onClose, updateCard, deleteCard }: CardEditProps) => {
   );
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [newLinkTitle, setNewLinkTitle] = useState("");
+  const [assignmentType, setAssignmentType] = useState<"assigned" | "open">(
+    card.assignment?.type || "open"
+  );
+  const [assignedTo, setAssignedTo] = useState(
+    card.assignment?.assignedTo
+      ? Array.isArray(card.assignment.assignedTo)
+        ? card.assignment.assignedTo[0]
+        : card.assignment.assignedTo
+      : ""
+  );
+  const { user } = useAuth();
+  const [projectMembers, setProjectMembers] = useState<string[]>([]);
+  const [assignedMembers, setAssignedMembers] = useState<string[]>(
+    card.assignment?.assignedTo || []
+  );
+
+  useEffect(() => {
+    const fetchProjectMembers = async () => {
+      const projectRef = doc(db, "projects", projectId);
+      const projectSnap = await getDoc(projectRef);
+      if (projectSnap.exists()) {
+        setProjectMembers(projectSnap.data().members || []);
+      }
+    };
+    fetchProjectMembers();
+  }, [projectId]);
 
   const handleDelete = async () => {
     if (confirm("Are you sure you want to delete this card?")) {
@@ -554,12 +873,25 @@ const CardEdit = ({ card, onClose, updateCard, deleteCard }: CardEditProps) => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    // Create assignment object based on type
+    let assignment: CardType["assignment"] = {
+      type: assignmentType,
+      assignedTo: assignmentType === "assigned" ? assignedMembers : [],
+      acceptedBy: Array.isArray(card.assignment?.acceptedBy)
+        ? card.assignment.acceptedBy
+        : [],
+      assignedBy: user?.email ?? undefined,
+      assignedAt: new Date().toISOString(),
+    };
+
     const updatedCard: Partial<CardType> = {
       title,
       description,
       icon: selectedIcon,
       links,
       lastModified: new Date().toISOString(),
+      assignment,
     };
 
     if (priority) {
@@ -587,6 +919,14 @@ const CardEdit = ({ card, onClose, updateCard, deleteCard }: CardEditProps) => {
 
   const removeLink = (index: number) => {
     setLinks(links.filter((_, i) => i !== index));
+  };
+
+  const handleAssignMember = (email: string) => {
+    if (assignedMembers.includes(email)) {
+      setAssignedMembers(assignedMembers.filter((m) => m !== email));
+    } else {
+      setAssignedMembers([...assignedMembers, email]);
+    }
   };
 
   return (
@@ -697,6 +1037,40 @@ const CardEdit = ({ card, onClose, updateCard, deleteCard }: CardEditProps) => {
       </div>
       <div>
         <label className="mb-1 block text-sm text-neutral-400">
+          Assignment
+        </label>
+        <select
+          value={assignmentType}
+          onChange={(e) =>
+            setAssignmentType(e.target.value as "assigned" | "open")
+          }
+          className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100 mb-2"
+        >
+          <option value="open">Open Task</option>
+          <option value="assigned">Assign to Members</option>
+        </select>
+
+        {assignmentType === "assigned" && (
+          <div className="space-y-2">
+            {projectMembers.map((member) => (
+              <label
+                key={member}
+                className="flex items-center gap-2 p-2 bg-neutral-800 rounded cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={assignedMembers.includes(member)}
+                  onChange={() => handleAssignMember(member)}
+                  className="rounded border-neutral-600"
+                />
+                <span className="text-neutral-200">{member}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+      <div>
+        <label className="mb-1 block text-sm text-neutral-400">
           Created by
         </label>
         <input
@@ -767,10 +1141,12 @@ const DropIndicator = ({ beforeId, column }: DropIndicatorProps) => {
 
 type AddCardProps = {
   column: ColumnType;
-  cards: CardType[]; // Add this
+  cards: CardType[];
+  projectId: string; // Add this
+  boardId: string; // Add this
 };
 
-const AddCard = ({ column, cards }: AddCardProps) => {
+const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [text, setText] = useState("");
   const [description, setDescription] = useState("");
@@ -781,22 +1157,28 @@ const AddCard = ({ column, cards }: AddCardProps) => {
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!text.trim().length || !user) return;
+    if (!text.trim().length || !user || !projectId || !boardId) return;
 
-    // Get max order of current column
+    // Calculate new order value
     const columnCards = cards
       .filter((c) => c.column === column)
-      .sort((a, b) => (b.order || 0) - (a.order || 0));
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
 
     const newOrder =
-      columnCards.length > 0 ? (columnCards[0].order || 0) + 1000 : 1000;
+      columnCards.length > 0
+        ? (columnCards[columnCards.length - 1].order || 0) + 1000
+        : 1000;
+
+    const newCardId = doc(
+      collection(db, "projects", projectId, "boards", boardId, "cards")
+    ).id;
 
     const newCard: Partial<CardType> = {
       column,
       title: text.trim(),
       description: description.trim(),
       icon: selectedIcon,
-      id: doc(collection(db, "users")).id,
+      id: newCardId,
       createdAt: new Date().toISOString(),
       createdBy: {
         uid: user.uid,
@@ -810,8 +1192,10 @@ const AddCard = ({ column, cards }: AddCardProps) => {
     }
 
     try {
-      const userDoc = doc(db, `users/${user.uid}/cards`, newCard.id || "");
-      await setDoc(userDoc, newCard);
+      await setDoc(
+        doc(db, `projects/${projectId}/boards/${boardId}/cards`, newCardId),
+        newCard
+      );
       setIsModalOpen(false);
       setText("");
       setDescription("");
@@ -912,6 +1296,13 @@ type CardType = {
   lastModified?: string;
   order?: number; // Add this field
   links?: { url: string; title: string }[];
+  assignment?: {
+    type: "assigned" | "open";
+    assignedTo: string[]; // Array of emails
+    acceptedBy: string[]; // Array of emails
+    assignedBy?: string;
+    assignedAt?: string;
+  };
 };
 
 type Priority = "low" | "medium" | "high";

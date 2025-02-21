@@ -15,14 +15,14 @@ export const Modal = ({ isOpen, onClose, children }: ModalProps) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          className="fixed top-0 left-0 w-screen h-screen z-50 flex items-center justify-center bg-black/60"
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.5 }}
             animate={{ scale: 1 }}
             exit={{ scale: 0.5 }}
-            className="relative w-full max-w-screen-xl rounded-lg bg-neutral-800 border border-neutral-700 p-6"
+            className="relative w-full max-w-md rounded-lg bg-neutral-800 border border-neutral-700 p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <button

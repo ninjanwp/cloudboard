@@ -14,7 +14,7 @@
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "firebase": "^11.3.1",
-    "framer-motion": "^12.4.3",
+    "framer-motion": "^12.4.7",
     "next": "15.1.7",
     "react": "^19.0.0",
     "react-dnd": "^16.0.1",
