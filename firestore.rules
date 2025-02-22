@@ -1,6 +1,19 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Allow authenticated users to read other users' display names
+    match /users/{userId} {
+      allow read: if request.auth != null;  // Allow all authenticated users to read user profiles
+      allow write: if request.auth != null && 
+                  request.auth.uid == userId && 
+                  request.resource.data.keys().hasOnly(['firstName', 'lastName', 'email']);
+      
+      // Add this index for email queries
+      allow list: if request.auth != null && 
+                 request.query.limit <= 1 &&
+                 'email' in request.query.filters;
+    }
+
     // Allow read/write access to authenticated users for their projects
     match /projects/{projectId} {
       // Allow read if user is a member or owner
@@ -35,6 +48,12 @@ service cloud.firestore {
       allow delete: if request.auth != null && 
                    request.auth.uid == resource.data.owner;
       
+      // Add rules for logs collection under projects
+      match /logs/{logId} {
+        allow read, create: if request.auth != null && 
+          request.auth.token.email in get(/databases/$(database)/documents/projects/$(projectId)).data.members;
+      }
+
       // Allow read/write access to boards within the project
       match /boards/{boardId} {
         allow read, write: if request.auth != null && 
@@ -77,32 +96,37 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
+    // Allow authenticated users to read/write their own user profile
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && 
+                  request.auth.uid == userId && 
+                  request.resource.data.keys().hasOnly(['firstName', 'lastName', 'email']);
+    }
+
     // Add rules for task assignments
     match /projects/{projectId}/boards/{boardId}/cards/{cardId} {
       // Allow read if user is a project member
       allow read: if request.auth != null && 
         request.auth.token.email in get(/databases/$(database)/documents/projects/$(projectId)).data.members;
       
-      // Allow create with assignment
+      // Allow create if user is a project member
       allow create: if request.auth != null && 
         request.auth.token.email in get(/databases/$(database)/documents/projects/$(projectId)).data.members;
       
-      // Allow update if user is member and:
-      // 1. They're the assignee
-      // 2. They're accepting an open task
-      // 3. They created the card
+      // Allow update if user is a project member (removed previous restrictions)
       allow update: if request.auth != null && 
         request.auth.token.email in get(/databases/$(database)/documents/projects/$(projectId)).data.members &&
-        (
-          resource.data.createdBy.email == request.auth.token.email ||
-          resource.data.assignment.assignedTo == request.auth.token.email ||
-          (
-            resource.data.assignment.type == "open" &&
-            !resource.data.assignment.acceptedBy &&
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['assignment']) &&
-            request.resource.data.assignment.acceptedBy == request.auth.token.email
-          )
-        );
+        // Validate assignment structure if it exists
+        (!request.resource.data.assignment || (
+          request.resource.data.assignment.type in ['assigned', 'open'] &&
+          (!request.resource.data.assignment.assignedTo || 
+           request.resource.data.assignment.assignedTo is string)
+        ));
+      
+      // Allow delete if user is a project member
+      allow delete: if request.auth != null && 
+        request.auth.token.email in get(/databases/$(database)/documents/projects/$(projectId)).data.members;
     }
   }
 }

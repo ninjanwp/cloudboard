@@ -26,11 +26,21 @@ import { Badge } from "./Badge"; // We'll create this component
 import classNames from "classnames";
 import * as FaIcons from "react-icons/fa6";
 import { IconSelector } from "./IconSelector";
+import { getUserDisplayName } from "../utils/userUtils";
+import { createLog } from "../utils/logUtils";
 
 const iconOptions = Object.keys(FaIcons).map((key) => ({
   name: key,
   icon: (FaIcons as { [key: string]: React.ComponentType })[key],
 }));
+
+const GridBackground = () => (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 0.2 }}
+    className="absolute z-0 pointer-events-none inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"
+  />
+);
 
 export const CustomKanban = ({
   projectId,
@@ -45,7 +55,10 @@ export const CustomKanban = ({
 
   useEffect(() => {
     const checkProjectAccess = async () => {
-      if (!projectId) return;
+      if (!projectId || !user) {
+        router.replace('/');
+        return;
+      }
 
       try {
         const projectRef = doc(db, "projects", projectId);
@@ -56,39 +69,33 @@ export const CustomKanban = ({
           !projectSnap.data().members.includes(user?.email)
         ) {
           setProjectError(true);
-          router.push("/projects");
+          router.replace('/');
         }
       } catch (error) {
         console.error("Error checking project access:", error);
         setProjectError(true);
-        router.push("/projects");
+        router.replace('/');
       }
     };
 
     checkProjectAccess();
-  }, [projectId, user?.email, router]);
-
-  if (projectError) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <p className="text-neutral-400">This project is no longer accessible</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <p className="text-neutral-400">
-          Please sign in to use the Kanban board
-        </p>
-      </div>
-    );
-  }
+  }, [projectId, user, router]);
 
   return (
-    <div className="w-full h-screen overflow-auto">
-      <Board projectId={projectId} boardId={boardId} />
+    <div className="w-full h-full">
+      {projectError ? (
+        <div className="flex h-full w-full items-center justify-center">
+          <p className="text-neutral-400">This project is no longer accessible</p>
+        </div>
+      ) : !user ? (
+        <div className="flex h-full w-full items-center justify-center">
+          <p className="text-neutral-400">
+            Please sign in to use the Kanban board
+          </p>
+        </div>
+      ) : (
+        <Board projectId={projectId} boardId={boardId} />
+      )}
     </div>
   );
 };
@@ -140,54 +147,57 @@ const Board = ({
   };
 
   return (
-    <div className="flex flex-col h-full w-full p-6">
-      <div className="flex h-full w-full">
-        <Column
-          title="Backlog"
-          column="backlog"
-          headingColor="blue-400"
-          cards={cards}
-          setCards={setCards}
-          updateCard={updateCard}
-          deleteCard={deleteCard}
-          projectId={projectId} // Add this
-          boardId={boardId} // Add this
-        />
-        <Column
-          title="To Do"
-          column="todo"
-          headingColor="red-400"
-          cards={cards}
-          setCards={setCards}
-          updateCard={updateCard}
-          deleteCard={deleteCard}
-          projectId={projectId} // Add this
-          boardId={boardId} // Add this
-        />
+    <div className="relative w-full h-full">
+      <GridBackground />
+      <div className="h-full w-full overflow-auto bg-neutral-950/80">
+        <div className="flex min-w-max p-6">
+          <Column
+            title="Backlog"
+            column="backlog"
+            headingColor="blue-400"
+            cards={cards}
+            setCards={setCards}
+            updateCard={updateCard}
+            deleteCard={deleteCard}
+            projectId={projectId} // Add this
+            boardId={boardId} // Add this
+          />
+          <Column
+            title="To Do"
+            column="todo"
+            headingColor="red-400"
+            cards={cards}
+            setCards={setCards}
+            updateCard={updateCard}
+            deleteCard={deleteCard}
+            projectId={projectId} // Add this
+            boardId={boardId} // Add this
+          />
 
-        <Column
-          title="In Progress"
-          column="doing"
-          headingColor="yellow-300"
-          cards={cards}
-          setCards={setCards}
-          updateCard={updateCard}
-          deleteCard={deleteCard}
-          projectId={projectId} // Add this
-          boardId={boardId} // Add this
-        />
+          <Column
+            title="Doing"
+            column="doing"
+            headingColor="yellow-300"
+            cards={cards}
+            setCards={setCards}
+            updateCard={updateCard}
+            deleteCard={deleteCard}
+            projectId={projectId} // Add this
+            boardId={boardId} // Add this
+          />
 
-        <Column
-          title="Done"
-          column="done"
-          headingColor="green-400"
-          cards={cards}
-          setCards={setCards}
-          updateCard={updateCard}
-          deleteCard={deleteCard}
-          projectId={projectId} // Add this
-          boardId={boardId} // Add this
-        />
+          <Column
+            title="Done"
+            column="done"
+            headingColor="green-400"
+            cards={cards}
+            setCards={setCards}
+            updateCard={updateCard}
+            deleteCard={deleteCard}
+            projectId={projectId} // Add this
+            boardId={boardId} // Add this
+          />
+        </div>
       </div>
     </div>
   );
@@ -223,6 +233,7 @@ const Column = ({
   projectId, // Add this
   boardId, // Add this
 }: ColumnProps) => {
+  const { user } = useAuth();
   const [active, setActive] = useState(false);
 
   const handleDragStart = (e: DragEvent, card: CardType) => {
@@ -285,6 +296,14 @@ const Column = ({
         const newCards = prevCards.filter((c) => c.id !== cardId);
         return [...newCards, updatedCard];
       });
+
+      await createLog(
+        projectId,
+        'task',
+        'moved a task',
+        `Moved "${card.title}" to ${column}`,
+        user?.email || 'unknown'
+      );
     }
   };
 
@@ -378,10 +397,10 @@ const Column = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={classNames(
-          "h-full w-full transition-colors rounded",
+          "h-full w-full transition-colors rounded border",
           active
-            ? "bg-blue-300/5 border border-blue-400/50 h-screen"
-            : "bg-neutral-800/0 border-neutral-800/0"
+            ? "bg-blue-300/5 border-blue-400/50"
+            : "border-transparent"  // Changed from border-neutral-800/0
         )}
       >
         <DropIndicator
@@ -446,6 +465,18 @@ const Card = ({ ...props }: CardProps) => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [userDisplayNames, setUserDisplayNames] = useState<{ [email: string]: string }>({});
+
+  useEffect(() => {
+    const loadDisplayNames = async () => {
+      const names: { [email: string]: string } = {};
+      for (const member of projectMembers) {
+        names[member] = await getUserDisplayName(member);
+      }
+      setUserDisplayNames(names);
+    };
+    loadDisplayNames();
+  }, [projectMembers]);
 
   const handleCardClick = () => {
     setIsEditing(false);
@@ -473,7 +504,7 @@ const Card = ({ ...props }: CardProps) => {
             createdBy: props.createdBy,
           })
         }
-        className="cursor-grab rounded border border-neutral-700 bg-neutral-800 p-3 hover:border-neutral-600 active:cursor-grabbing"
+        className="cursor-grab rounded border border-neutral-700 bg-neutral-800 p-3 hover:border-neutral-600 active:cursor-grabbing select-none"  // Added select-none
       >
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">
@@ -485,7 +516,7 @@ const Card = ({ ...props }: CardProps) => {
           </p>
         </div>
         {props.description && (
-          <p className="mt-2 line-clamp-5 text-xs text-neutral-400 whitespace-pre-wrap">
+          <p className="mt-2 line-clamp-5 text-xs text-neutral-400 whitespace-pre-wrap break-words">
             {props.description}
           </p>
         )}
@@ -508,29 +539,11 @@ const Card = ({ ...props }: CardProps) => {
         )}
         <div className="mt-2 flex items-center justify-between text-xs">
           <div className="text-neutral-400">
-            {props.assignment?.type === "assigned" && (
+            {props.assignment?.assignedTo && (
               <span className="font-bold">
                 Assigned to:{" "}
                 <span className="text-blue-400">
-                  {Array.isArray(props.assignment.assignedTo)
-                    ? props.assignment.assignedTo
-                        .filter((email) => projectMembers.includes(email))
-                        .join(", ")
-                    : props.assignment.assignedTo}
-                </span>
-              </span>
-            )}
-            {(props.assignment?.acceptedBy ?? []).filter((email) =>
-              projectMembers.includes(email)
-            ).length > 0 && (
-              <span className="font-bold">
-                Team:{" "}
-                <span className="text-blue-400">
-                  {Array.isArray(props.assignment?.acceptedBy)
-                    ? props.assignment?.acceptedBy
-                        ?.filter((email) => projectMembers.includes(email))
-                        .join(", ")
-                    : props.assignment?.acceptedBy ?? []}
+                  {userDisplayNames[props.assignment.assignedTo] || props.assignment.assignedTo}
                 </span>
               </span>
             )}
@@ -605,7 +618,6 @@ const CardOverview = ({
   const { user } = useAuth();
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
   const router = useRouter();
-  const isCreator = user?.email === card.createdBy.email;
 
   useEffect(() => {
     const fetchProjectMembers = async () => {
@@ -629,51 +641,38 @@ const CardOverview = ({
     return projectMembers.includes(email);
   };
 
-  const handleAcceptTask = async () => {
-    if (!user?.email) return;
+  const handleAssign = async (email: string) => {
+    await updateCard(card.id, {
+      assignment: {
+        assignedTo: email,
+        assignedAt: new Date().toISOString(),
+      },
+    });
 
-    // Initialize arrays properly
-    const currentAssignment = card.assignment || {
-      type: "open",
-      assignedTo: [],
-      acceptedBy: [],
-    };
-
-    const currentAcceptedBy = Array.isArray(currentAssignment.acceptedBy)
-      ? currentAssignment.acceptedBy
-      : [];
-
-    if (currentAcceptedBy.includes(user.email)) return;
-
-    try {
-      await updateCard(card.id, {
-        assignment: {
-          type: "open",
-          assignedTo: currentAssignment.assignedTo || [],
-          acceptedBy: [...currentAcceptedBy, user.email],
-          assignedAt: new Date().toISOString(),
-        },
-      });
-    } catch (error) {
-      console.error("Error accepting task:", error);
-    }
+    await createLog(
+      projectId,
+      'assignment',
+      'took a task',
+      `${email} took "${card.title}"`,
+      user?.email || 'unknown'
+    );
   };
 
-  const handleAbandonTask = async () => {
-    if (!user?.email) return;
+  const handleUnassign = async () => {
+    await updateCard(card.id, {
+      assignment: {
+        assignedTo: null,
+        assignedAt: new Date().toISOString(),
+      },
+    });
 
-    const currentAcceptedBy = card.assignment?.acceptedBy || [];
-
-    if (confirm("Are you sure you want to abandon this task?")) {
-      await updateCard(card.id, {
-        assignment: {
-          type: "open",
-          assignedTo: card.assignment?.assignedTo || [],
-          acceptedBy: currentAcceptedBy.filter((email) => email !== user.email),
-          assignedAt: new Date().toISOString(),
-        },
-      });
-    }
+    await createLog(
+      projectId,
+      'assignment',
+      'abandoned a task',
+      `Abandoned "${card.title}"`,
+      user?.email || 'unknown'
+    );
   };
 
   const IconComponent =
@@ -683,18 +682,16 @@ const CardOverview = ({
   return (
     <div className="space-y-8 p-4">
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <IconComponent className="text-neutral-100 text-4xl" />
-          <h2 className="text-4xl font-bold text-neutral-100">{card.title}</h2>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <IconComponent className="text-neutral-100 text-4xl flex-shrink-0" />
+          <h2 className="text-4xl font-bold text-neutral-100 break-words overflow-hidden">{card.title}</h2>
         </div>
-        {isCreator && (
-          <button
-            onClick={onEdit}
-            className="text-neutral-400 flex gap-2 justify-center items-center text-2xl hover:text-neutral-100"
-          >
-            <FaIcons.FaPen />
-          </button>
-        )}
+        <button
+          onClick={onEdit}
+          className="text-neutral-400 flex gap-2 justify-center items-center text-2xl hover:text-neutral-100 flex-shrink-0"
+        >
+          <FaIcons.FaPen />
+        </button>
       </div>
 
       {/* Priority and other existing sections */}
@@ -702,76 +699,15 @@ const CardOverview = ({
 
       {/* Assignment Section */}
       <div className="border-t border-neutral-700 pt-4">
-        <p className="text-sm font-medium text-neutral-300 mb-2">
+        <p className="text-sm font-medium text-neutral-300 mb-2 whitespace-pre-wrap break-words">
           {card.description}
         </p>
-        {card.assignment?.type === "assigned" ? (
-          <div className="space-y-2">
-            <p className="text-sm text-neutral-400">Assigned to:</p>
-            <div className="flex flex-wrap gap-2">
-              {Array.isArray(card.assignment.assignedTo) &&
-                card.assignment.assignedTo
-                  .filter((email) => isMemberActive(email))
-                  .map((email) => (
-                    <span
-                      key={email}
-                      className="px-2 py-1 bg-neutral-700 rounded text-neutral-100"
-                    >
-                      {email}
-                    </span>
-                  ))}
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {Array.isArray(card.assignment?.acceptedBy) &&
-            card.assignment?.acceptedBy.filter((email) =>
-              isMemberActive(email)
-            ).length > 0 ? (
-              <div className="space-y-2">
-                <p className="text-sm text-neutral-400">Team:</p>
-                <div className="flex flex-wrap gap-2">
-                  {card.assignment.acceptedBy
-                    .filter((email) => isMemberActive(email))
-                    .map((email) => (
-                      <span
-                        key={email}
-                        className="px-2 py-1 bg-neutral-700 rounded text-neutral-100"
-                      >
-                        {email}
-                      </span>
-                    ))}
-                </div>
-                {card.assignment.acceptedBy.includes(user?.email || "") ? (
-                  <button
-                    onClick={handleAbandonTask}
-                    className="w-full p-2 bg-red-500 rounded text-white hover:bg-red-600"
-                  >
-                    Leave Task
-                  </button>
-                ) : (
-                  user?.email && (
-                    <button
-                      onClick={handleAcceptTask}
-                      className="w-full p-2 bg-blue-500 rounded text-white hover:bg-blue-600"
-                    >
-                      Join Task
-                    </button>
-                  )
-                )}
-              </div>
-            ) : (
-              user?.email && (
-                <button
-                  onClick={handleAcceptTask}
-                  className="w-full p-2 bg-blue-500 rounded text-white hover:bg-blue-600"
-                >
-                  Join Task
-                </button>
-              )
-            )}
-          </div>
-        )}
+        <TaskAssignmentOverview
+          currentAssignee={card.assignment?.assignedTo || null}
+          onAssign={handleAssign}
+          onUnassign={handleUnassign}
+          currentUserEmail={user?.email || null}
+        />
       </div>
 
       {/* Creator info section */}
@@ -808,18 +744,13 @@ const CardEdit = ({
   const [description, setDescription] = useState(card.description || "");
   const [priority, setPriority] = useState<Priority | "">(card.priority || "");
   const [selectedIcon, setSelectedIcon] = useState(card.icon);
-  const [links, setLinks] = useState<{ url: string; title: string }[]>(
-    card.links || []
-  );
+  const [links, setLinks] = useState<{ url: string; title: string }[]>(card.links || []);
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [newLinkTitle, setNewLinkTitle] = useState("");
-  const [assignmentType, setAssignmentType] = useState<"assigned" | "open">(
-    card.assignment?.type || "open"
-  );
   const { user } = useAuth();
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
-  const [assignedMembers, setAssignedMembers] = useState<string[]>(
-    card.assignment?.assignedTo || []
+  const [assignedMember, setAssignedMember] = useState<string>(
+    card.assignment?.assignedTo || ""
   );
 
   useEffect(() => {
@@ -835,32 +766,62 @@ const CardEdit = ({
 
   const handleDelete = async () => {
     if (confirm("Are you sure you want to delete this card?")) {
+      await createLog(
+        projectId,
+        'task',
+        'deleted a task',
+        `Deleted "${card.title}"`,
+        user?.email || 'unknown'
+      );
       await deleteCard(card.id);
       onClose();
     }
   };
 
+  const handleAssign = async (email: string) => {
+    setAssignedMember(email);
+  };
+
+  const handleUnassign = async () => {
+    setAssignedMember("");
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    // Create assignment object based on type
-    const assignment: CardType["assignment"] = {
-      type: assignmentType,
-      assignedTo: assignmentType === "assigned" ? assignedMembers : [],
-      acceptedBy: Array.isArray(card.assignment?.acceptedBy)
-        ? card.assignment.acceptedBy
-        : [],
-      assignedBy: user?.email ?? undefined,
-      assignedAt: new Date().toISOString(),
-    };
+    const changes: string[] = [];
+    if (title !== card.title) changes.push(`title from "${card.title}" to "${title}"`);
+    if (description !== (card.description || "")) changes.push("description");
+    if (priority !== card.priority) changes.push("priority");
+    if (selectedIcon !== card.icon) changes.push("icon");
 
+    // Log all changes if any were made
+    if (changes.length > 0) {
+      await createLog(
+        projectId,
+        'task',
+        'edited a task',
+        `Modified ${card.title}: changed ${changes.join(", ")}`,
+        user?.email || 'unknown'
+      );
+    }
+
+    const assignmentChanged = assignedMember !== (card.assignment?.assignedTo || "");
     const updatedCard: Partial<CardType> = {
       title,
       description,
       icon: selectedIcon,
       links,
       lastModified: new Date().toISOString(),
-      assignment,
+      assignment: assignedMember
+        ? {
+            assignedTo: assignedMember,
+            assignedAt: new Date().toISOString(),
+          }
+        : {
+            assignedTo: null,
+            assignedAt: new Date().toISOString(),
+          },
     };
 
     if (priority) {
@@ -868,6 +829,28 @@ const CardEdit = ({
     }
 
     await updateCard(card.id, updatedCard);
+
+    // Log assignment changes
+    if (assignmentChanged) {
+      if (assignedMember) {
+        await createLog(
+          projectId,
+          'assignment',
+          'assigned a task',
+          `Assigned "${title}" to ${assignedMember}`,
+          user?.email || 'unknown'
+        );
+      } else {
+        await createLog(
+          projectId,
+          'assignment',
+          'unassigned a task',
+          `Removed assignment from "${title}"`,
+          user?.email || 'unknown'
+        );
+      }
+    }
+
     onClose();
   };
 
@@ -888,14 +871,6 @@ const CardEdit = ({
 
   const removeLink = (index: number) => {
     setLinks(links.filter((_, i) => i !== index));
-  };
-
-  const handleAssignMember = (email: string) => {
-    if (assignedMembers.includes(email)) {
-      setAssignedMembers(assignedMembers.filter((m) => m !== email));
-    } else {
-      setAssignedMembers([...assignedMembers, email]);
-    }
   };
 
   return (
@@ -1008,35 +983,13 @@ const CardEdit = ({
         <label className="mb-1 block text-sm text-neutral-400">
           Assignment
         </label>
-        <select
-          value={assignmentType}
-          onChange={(e) =>
-            setAssignmentType(e.target.value as "assigned" | "open")
-          }
-          className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100 mb-2"
-        >
-          <option value="open">Open Task</option>
-          <option value="assigned">Assign to Members</option>
-        </select>
-
-        {assignmentType === "assigned" && (
-          <div className="space-y-2">
-            {projectMembers.map((member) => (
-              <label
-                key={member}
-                className="flex items-center gap-2 p-2 bg-neutral-800 rounded cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={assignedMembers.includes(member)}
-                  onChange={() => handleAssignMember(member)}
-                  className="rounded border-neutral-600"
-                />
-                <span className="text-neutral-200">{member}</span>
-              </label>
-            ))}
-          </div>
-        )}
+        <TaskAssignment
+          currentAssignee={assignedMember}
+          projectMembers={projectMembers}
+          onAssign={handleAssign}
+          onUnassign={handleUnassign}
+          currentUserEmail={user?.email || null}
+        />
       </div>
       <div>
         <label className="mb-1 block text-sm text-neutral-400">
@@ -1122,6 +1075,19 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
   const [selectedIcon, setSelectedIcon] = useState(iconOptions[0].name);
   const [priority, setPriority] = useState<Priority | "">("");
   const { user } = useAuth();
+  const [assignedMember, setAssignedMember] = useState<string | null>(null);
+  const [projectMembers, setProjectMembers] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchProjectMembers = async () => {
+      const projectRef = doc(db, "projects", projectId);
+      const projectSnap = await getDoc(projectRef);
+      if (projectSnap.exists()) {
+        setProjectMembers(projectSnap.data().members || []);
+      }
+    };
+    fetchProjectMembers();
+  }, [projectId]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -1151,9 +1117,13 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
       createdAt: new Date().toISOString(),
       createdBy: {
         uid: user.uid,
-        email: user.email || "",
+        email: user.email || "", 
       },
       order: newOrder,
+      assignment: {
+        assignedTo: assignedMember,
+        assignedAt: new Date().toISOString(),
+      },
     };
 
     if (priority) {
@@ -1165,6 +1135,25 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
         doc(db, `projects/${projectId}/boards/${boardId}/cards`, newCardId),
         newCard
       );
+      await createLog(
+        projectId,
+        'task',
+        'created a new task',
+        `Created "${text.trim()}"`,
+        user.email || 'unknown'
+      );
+
+      // If there's an initial assignment, create assignment log
+      if (assignedMember) {
+        await createLog(
+          projectId,
+          'assignment',
+          'assigned a task',
+          `Assigned "${text.trim()}" to ${assignedMember}`,
+          user.email || 'unknown'
+        );
+      }
+
       setIsModalOpen(false);
       setText("");
       setDescription("");
@@ -1227,6 +1216,18 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
               setSelectedIcon={setSelectedIcon}
             />
           </div>
+          <div>
+            <label className="mb-1 block text-sm text-neutral-400">
+              Assignment
+            </label>
+            <TaskAssignment
+              currentAssignee={assignedMember}
+              projectMembers={projectMembers}
+              onAssign={(email) => setAssignedMember(email)}
+              onUnassign={() => setAssignedMember(null)}
+              currentUserEmail={user?.email || null}
+            />
+          </div>
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -1266,12 +1267,128 @@ type CardType = {
   order?: number; // Add this field
   links?: { url: string; title: string }[];
   assignment?: {
-    type: "assigned" | "open";
-    assignedTo: string[]; // Array of emails
-    acceptedBy: string[]; // Array of emails
-    assignedBy?: string;
-    assignedAt?: string;
+    assignedTo: string | null; // Changed to string | null instead of undefined
+    assignedAt: string;
   };
 };
 
 type Priority = "low" | "medium" | "high";
+
+const TaskAssignment = ({
+  currentAssignee,
+  projectMembers,
+  onAssign,
+  onUnassign,
+  currentUserEmail,
+}: {
+  currentAssignee: string | null;
+  projectMembers: string[];
+  onAssign: (email: string) => void;
+  onUnassign: () => void;
+  currentUserEmail: string | null;
+}) => {
+  const [userDisplayNames, setUserDisplayNames] = useState<{ [email: string]: string }>({});
+
+  useEffect(() => {
+    const loadDisplayNames = async () => {
+      const names: { [email: string]: string } = {};
+      for (const member of projectMembers) {
+        names[member] = await getUserDisplayName(member);
+      }
+      setUserDisplayNames(names);
+    };
+    loadDisplayNames();
+  }, [projectMembers]);
+
+  return (
+    <div className="space-y-4 bg-neutral-900 p-1 rounded border border-neutral-700">
+      <div className="flex flex-col gap-2">
+        {projectMembers.map((member) => (
+          <label
+            key={member}
+            className={`flex items-center gap-2 p-2 rounded cursor-pointer ${
+              currentAssignee === member
+                ? "bg-blue-500/20 border border-blue-500"
+                : "bg-neutral-800 border border-neutral-700 hover:bg-neutral-700"
+            }`}
+          >
+            <input
+              type="radio"
+              name="assignee"
+              checked={currentAssignee === member}
+              onChange={() => onAssign(member)}
+              className="hidden"
+            />
+            <span className="text-neutral-200">{userDisplayNames[member] || member}</span>
+            {currentAssignee === member && (
+              <span className="ml-auto text-xs text-blue-400">Assigned</span>
+            )}
+          </label>
+        ))}
+      </div>
+      {currentAssignee && (
+        <button
+          onClick={onUnassign}
+          className="w-full p-2 bg-red-500 rounded text-white hover:bg-red-600"
+        >
+          Unassign Task
+        </button>
+      )}
+    </div>
+  );
+};
+
+// Add a new component for the overview-specific assignment display
+const TaskAssignmentOverview = ({
+  currentAssignee,
+  onAssign,
+  onUnassign,
+  currentUserEmail,
+}: {
+  currentAssignee: string | null;
+  onAssign: (email: string) => void;
+  onUnassign: () => void;
+  currentUserEmail: string | null;
+}) => {
+  const [assigneeName, setAssigneeName] = useState<string>("");
+
+  useEffect(() => {
+    const loadDisplayName = async () => {
+      if (currentAssignee) {
+        const name = await getUserDisplayName(currentAssignee);
+        setAssigneeName(name);
+      }
+    };
+    loadDisplayName();
+  }, [currentAssignee]);
+
+  if (currentAssignee) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="p-2 rounded bg-blue-500/20 border border-blue-500">
+          <div className="flex justify-between items-center">
+            <span className="text-neutral-200">{assigneeName}</span>
+            <span className="text-xs text-blue-400">Assigned</span>
+          </div>
+        </div>
+        {currentAssignee === currentUserEmail && (
+          <button
+            onClick={onUnassign}
+            className="w-full p-2 bg-red-500 rounded text-white hover:bg-red-600"
+          >
+            Abandon Task
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => currentUserEmail && onAssign(currentUserEmail)}
+      className="w-full p-2 bg-blue-500 rounded text-white hover:bg-blue-600"
+    >
+      Take Task
+    </button>
+  );
+};

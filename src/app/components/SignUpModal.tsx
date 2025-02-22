@@ -19,15 +19,26 @@ export const SignUpModal = ({ isOpen, onClose }: SignUpModalProps) => {
     e.preventDefault();
     try {
       await signUpWithEmailPassword(email, password);
+      setEmail("");
+      setPassword("");
       onClose();
     } catch (error) {
       console.error("Error signing up with email/password", error);
     }
   };
 
+  const handleGoogleSignUp = async () => {
+    try {
+      await signInWithGoogle();
+      onClose();
+    } catch (error) {
+      console.error("Error signing up with Google", error);
+    }
+  };
+
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
-      <div className="space-y-4 p-4 bg-neutral-800 rounded-lg w-full max-w-md">
+      <div className="space-y-4 p-4 bg-neutral-800 rounded-lg w-full">
         <h2 className="text-2xl font-bold text-neutral-100 w-full text-center">
           Sign Up
         </h2>
@@ -61,7 +72,7 @@ export const SignUpModal = ({ isOpen, onClose }: SignUpModalProps) => {
             </button>
             <hr />
             <button
-              onClick={signInWithGoogle}
+              onClick={handleGoogleSignUp}
               className="w-full rounded-lg bg-neutral-900 p-4 text-white hover:bg-neutral-950 flex justify-center items-center gap-2"
             >
               <FaGoogle /> Sign up with Google

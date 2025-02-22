@@ -25,9 +25,11 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "../../../firebase"; // Import Firestore
+import { useRouter } from "next/navigation";  // Add this import
 
 type AuthContextType = {
   user: User | null;
+  loading: boolean;  // Add this
   signInWithGoogle: () => Promise<void>;
   signInWithEmailPassword: (email: string, password: string) => Promise<void>;
   signUpWithEmailPassword: (email: string, password: string) => Promise<void>;
@@ -56,6 +58,7 @@ type ProjectInvitation = {
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  loading: true,  // Add this
   signInWithGoogle: async () => {},
   signInWithEmailPassword: async () => {},
   signUpWithEmailPassword: async () => {},
@@ -74,11 +77,18 @@ const AuthContext = createContext<AuthContextType>({
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);  // Add this
   const [invitations, setInvitations] = useState<ProjectInvitation[]>([]);
+  const router = useRouter();  // Add this
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setUser(user);
+      setLoading(false);  // Add this
+      // Clear invitations when user logs out
+      if (!user) {
+        setInvitations([]);
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -131,6 +141,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const handleSignOut = async () => {
     try {
+      // Navigate home first, then sign out
+      router.replace('/');
       await signOut(auth);
     } catch (error) {
       console.error("Error signing out", error);
@@ -322,6 +334,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
+        loading,  // Add this
         signInWithGoogle,
         signInWithEmailPassword,
         signUpWithEmailPassword,

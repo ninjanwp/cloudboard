@@ -21,16 +21,27 @@ export const SignInModal = ({ isOpen, onClose }: SignInModalProps) => {
     e.preventDefault();
     try {
       await signInWithEmailPassword(email, password);
+      setEmail("");
+      setPassword("");
       onClose();
     } catch (error) {
       console.error("Error signing in with email/password", error);
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      onClose();
+    } catch (error) {
+      console.error("Error signing in with Google", error);
+    }
+  };
+
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose}>
-        <div className="space-y-4 p-4 bg-neutral-800 rounded-lg w-full max-w-md">
+        <div className="space-y-4 p-4 bg-neutral-800 rounded-lg w-full">
           <h2 className="text-2xl font-bold text-neutral-100 w-full text-center">
             Sign In
           </h2>
@@ -67,7 +78,7 @@ export const SignInModal = ({ isOpen, onClose }: SignInModalProps) => {
 
               <button
                 type="button" // Change to type="button" to prevent form submission
-                onClick={signInWithGoogle}
+                onClick={handleGoogleSignIn} // Change to use the new handler
                 className="w-full rounded-lg bg-neutral-900 p-4 text-white hover:bg-neutral-950 flex justify-center items-center gap-2"
               >
                 <FaGoogle /> Sign in with Google
