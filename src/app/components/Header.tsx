@@ -6,8 +6,7 @@ import { FaBell, FaUser, FaChevronDown } from "react-icons/fa6";
 import { SignInModal } from "./SignInModal";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { useRouter, usePathname } from "next/navigation";
-import { useProject } from "../context/ProjectContext";
+import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 
@@ -22,8 +21,6 @@ export const Header = ({
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
-  const { currentProject } = useProject();
   const [userDisplayName, setUserDisplayName] = useState<string>("");
 
   useEffect(() => {
@@ -41,9 +38,6 @@ export const Header = ({
     };
     fetchUserProfile();
   }, [user]);
-
-  const isProjectPage = pathname?.includes('/projects/');
-  const projectId = currentProject?.id;
 
   return (
     <header className="fixed w-screen top-0 left-0 z-[100] border-b border-white/10 bg-neutral-950">

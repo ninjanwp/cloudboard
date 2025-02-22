@@ -616,30 +616,6 @@ const CardOverview = ({
   projectId,
 }: CardOverviewProps) => {
   const { user } = useAuth();
-  const [projectMembers, setProjectMembers] = useState<string[]>([]);
-  const router = useRouter();
-
-  useEffect(() => {
-    const fetchProjectMembers = async () => {
-      try {
-        const projectRef = doc(db, "projects", projectId);
-        const projectSnap = await getDoc(projectRef);
-        if (projectSnap.exists()) {
-          setProjectMembers(projectSnap.data().members || []);
-        } else {
-          router.push("/projects");
-        }
-      } catch (error) {
-        console.error("Error fetching project members:", error);
-        router.push("/projects");
-      }
-    };
-    fetchProjectMembers();
-  }, [projectId, router]);
-
-  const isMemberActive = (email: string) => {
-    return projectMembers.includes(email);
-  };
 
   const handleAssign = async (email: string) => {
     await updateCard(card.id, {
@@ -988,7 +964,6 @@ const CardEdit = ({
           projectMembers={projectMembers}
           onAssign={handleAssign}
           onUnassign={handleUnassign}
-          currentUserEmail={user?.email || null}
         />
       </div>
       <div>
@@ -1225,7 +1200,6 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
               projectMembers={projectMembers}
               onAssign={(email) => setAssignedMember(email)}
               onUnassign={() => setAssignedMember(null)}
-              currentUserEmail={user?.email || null}
             />
           </div>
           <div className="flex justify-end gap-2">
@@ -1279,13 +1253,11 @@ const TaskAssignment = ({
   projectMembers,
   onAssign,
   onUnassign,
-  currentUserEmail,
 }: {
   currentAssignee: string | null;
   projectMembers: string[];
   onAssign: (email: string) => void;
   onUnassign: () => void;
-  currentUserEmail: string | null;
 }) => {
   const [userDisplayNames, setUserDisplayNames] = useState<{ [email: string]: string }>({});
 

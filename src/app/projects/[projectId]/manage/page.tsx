@@ -1,14 +1,6 @@
 "use client";
 
-interface Project {
-  id: string;
-  name: string;
-  owner: string;
-  ownerEmail: string;
-  members: string[];
-  createdAt: any;
-  icon?: string;
-}
+import { Project } from "../../../context/ProjectContext";
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
@@ -55,7 +47,7 @@ export default function ProjectManagePage() {
             m === projectData.members[0]  // First member is always the owner
           ) || '',
           members: projectData.members || [],
-          createdAt: projectData.createdAt,
+          createdAt: projectData.createdAt, // Keep as Timestamp instead of converting to string
           icon: projectData.icon
         };
         setCurrentProject(fullProject);
@@ -81,8 +73,10 @@ export default function ProjectManagePage() {
     try {
       await inviteUserToProject(projectId, newMemberEmail);
       setNewMemberEmail("");
-    } catch (error) {
+      setError("");
+    } catch (err) {
       setError("Failed to send invitation");
+      console.error("Invitation error:", err);
     }
   };
 
@@ -90,8 +84,9 @@ export default function ProjectManagePage() {
     if (window.confirm(`Are you sure you want to remove ${email} from the project?`)) {
       try {
         await removeUserFromProject(projectId, email);
-      } catch (error) {
+      } catch (err) {
         setError("Failed to remove member");
+        console.error("Remove member error:", err);
       }
     }
   };
@@ -105,8 +100,9 @@ export default function ProjectManagePage() {
         await deleteProject(projectId);
         // Clear the current project from context
         setCurrentProject(null);
-      } catch (error) {
+      } catch (err) {
         setError("Failed to delete project");
+        console.error("Delete project error:", err);
         // If deletion fails, we might want to navigate back to the project
         router.replace(`/projects/${projectId}`);
       }
@@ -128,8 +124,9 @@ export default function ProjectManagePage() {
       await updateDoc(projectRef, updates);
       setShowEditModal(false);
       setError("");
-    } catch (error) {
+    } catch (err) {
       setError("Failed to update project");
+      console.error("Update project error:", err);
     }
   };
 
@@ -138,8 +135,9 @@ export default function ProjectManagePage() {
       try {
         await leaveProject(projectId);
         router.replace('/');
-      } catch (error) {
+      } catch (err) {
         setError("Failed to leave project");
+        console.error("Leave project error:", err);
       }
     }
   };

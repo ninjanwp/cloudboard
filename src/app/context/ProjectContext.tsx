@@ -1,16 +1,17 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "../../../firebase";
 
 export type Project = {
   id: string;
   name: string;
   owner: string;
+  ownerEmail: string;
   members: string[];
   icon?: string;
-  createdAt: string;
+  createdAt: Timestamp;
 };
 
 type ProjectContextType = {

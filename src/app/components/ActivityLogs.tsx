@@ -1,22 +1,21 @@
-import { collection, query, orderBy, onSnapshot, limit, startAfter, getDocs } from "firebase/firestore";
-import { useEffect, useState } from "react";
+import { collection, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot } from "firebase/firestore";
+import { useEffect, useState, useCallback } from "react";
 import { db } from "../../../firebase";
 import { LogEntry, LogType, getLogIcon, formatLogDate } from "../utils/logUtils";
 import { getUserDisplayName } from "../utils/userUtils";
-import { FaChevronLeft, FaChevronRight } from "react-icons/fa6";
+import { FaChevronRight } from "react-icons/fa6";
 
 export const ActivityLogs = ({ projectId }: { projectId: string }) => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [selectedType, setSelectedType] = useState<LogType | 'all'>('all');
   const [userNames, setUserNames] = useState<{[key: string]: string}>({});
-  const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [lastDoc, setLastDoc] = useState<any>(null);
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
   const logsPerPage = 10;
 
   // Function to fetch logs
-  const fetchLogs = async (isNewQuery: boolean = false) => {
+  const fetchLogs = useCallback(async (isNewQuery: boolean = false) => {
     setIsLoading(true);
     try {
       const logsRef = collection(db, `projects/${projectId}/logs`);
@@ -66,18 +65,16 @@ export const ActivityLogs = ({ projectId }: { projectId: string }) => {
       console.error("Error fetching logs:", error);
     }
     setIsLoading(false);
-  };
+  }, [projectId, userNames, lastDoc]);
 
   // Reset pagination when type changes
   useEffect(() => {
-    setCurrentPage(1);
     setLastDoc(null);
     fetchLogs(true);
-  }, [selectedType, projectId]);
+  }, [selectedType, projectId, fetchLogs]);
 
   const handleNextPage = () => {
     if (hasMore && !isLoading) {
-      setCurrentPage(prev => prev + 1);
       fetchLogs();
     }
   };

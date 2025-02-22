@@ -8,8 +8,6 @@ import {
   onSnapshot,
   query,
   where,
-  doc,
-  updateDoc,
 } from "firebase/firestore";
 import { db } from "../../../firebase";
 import {
@@ -45,10 +43,6 @@ export const Sidebar = ({
   const {
     user,
     createProject,
-    inviteUserToProject,
-    deleteProject,
-    leaveProject,
-    removeUserFromProject,
   } = useAuth();
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [projects, setProjects] = useState<ProjectType[]>([]);
@@ -89,7 +83,7 @@ export const Sidebar = ({
 
   useEffect(() => {
     onCollapsedChange(defaultCollapsed);
-  }, []);
+  }, [defaultCollapsed, onCollapsedChange]);
 
   const handleCreateProject = async () => {
     console.log("Creating project with name:", projectName); // Add logging
@@ -100,39 +94,6 @@ export const Sidebar = ({
     console.log("Project created successfully"); // Add logging
   };
 
-  const handleDeleteProject = async (
-    e: React.MouseEvent,
-    projectId: string
-  ) => {
-    e.stopPropagation();
-    if (
-      confirm(
-        "Are you sure you want to delete this project? This action cannot be undone."
-      )
-    ) {
-      try {
-        await deleteProject(projectId);
-      } catch (error) {
-        console.error("Error deleting project:", error);
-      }
-    }
-  };
-
-  const handleLeaveProject = async (e: React.MouseEvent, projectId: string) => {
-    e.stopPropagation();
-    if (confirm("Are you sure you want to leave this project?")) {
-      try {
-        await leaveProject(projectId);
-        // Optionally, clear the selected project if it's the one being left
-        if (selectedProjectId === projectId) {
-          handleProjectSelect("");
-        }
-      } catch (error) {
-        console.error("Error leaving project:", error);
-        alert("Failed to leave project. Please try again.");
-      }
-    }
-  };
 
   const handleCollapse = () => {
     const newState = !isCollapsed;

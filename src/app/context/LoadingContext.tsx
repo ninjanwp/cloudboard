@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import React, { createContext, useContext, useState, useEffect, Suspense } from 'react';
+import { usePathname } from 'next/navigation';
 
 interface LoadingContextType {
   isLoading: boolean;
@@ -12,11 +12,10 @@ const LoadingContext = createContext<LoadingContextType>({ isLoading: false });
 export const LoadingProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(false);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     setIsLoading(false);
-  }, [pathname, searchParams]);
+  }, [pathname]);
 
   return (
     <LoadingContext.Provider value={{ isLoading }}>
@@ -29,5 +28,11 @@ export const LoadingProvider = ({ children }: { children: React.ReactNode }) => 
     </LoadingContext.Provider>
   );
 };
+
+export const LoadingProviderWithSuspense = ({ children }: { children: React.ReactNode }) => (
+  <Suspense fallback={<div>Loading...</div>}>
+    <LoadingProvider>{children}</LoadingProvider>
+  </Suspense>
+);
 
 export const useLoading = () => useContext(LoadingContext);

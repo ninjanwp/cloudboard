@@ -1,4 +1,4 @@
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
 import { db } from "../../../firebase";
 
 export type LogType = 'task' | 'member' | 'project' | 'assignment';
@@ -8,7 +8,7 @@ export interface LogEntry {
   action: string;
   details: string;
   actor: string;
-  timestamp: any;
+  timestamp: Timestamp;
 }
 
 export const createLog = async (
@@ -43,7 +43,7 @@ export const getLogIcon = (type: LogType) => {
   }
 };
 
-export const formatLogDate = (timestamp: any) => {
+export const formatLogDate = (timestamp: Timestamp) => {
   if (!timestamp) return '';
   
   const date = timestamp.toDate();
