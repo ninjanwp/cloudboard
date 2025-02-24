@@ -51,7 +51,7 @@ export const CustomKanban = ({
   useEffect(() => {
     const checkProjectAccess = async () => {
       if (!projectId || !user) {
-        router.replace('/');
+        router.replace("/");
         return;
       }
 
@@ -64,12 +64,12 @@ export const CustomKanban = ({
           !projectSnap.data().members.includes(user?.email)
         ) {
           setProjectError(true);
-          router.replace('/');
+          router.replace("/");
         }
       } catch (error) {
         console.error("Error checking project access:", error);
         setProjectError(true);
-        router.replace('/');
+        router.replace("/");
       }
     };
 
@@ -80,7 +80,9 @@ export const CustomKanban = ({
     <div className="w-full h-full">
       {projectError ? (
         <div className="flex h-full w-full items-center justify-center">
-          <p className="text-neutral-400">This project is no longer accessible</p>
+          <p className="text-neutral-400">
+            This project is no longer accessible
+          </p>
         </div>
       ) : !user ? (
         <div className="flex h-full w-full items-center justify-center">
@@ -115,7 +117,7 @@ const Board = ({
         // Add default taskType if it doesn't exist
         const data = doc.data();
         if (!data.taskType) {
-          data.taskType = 'task'; // Set default value
+          data.taskType = "task"; // Set default value
         }
         cardsData.push({ id: doc.id, ...data } as CardType);
       });
@@ -301,10 +303,10 @@ const Column = ({
 
       await createLog(
         projectId,
-        'task',
-        'moved a task',
+        "task",
+        "moved a task",
         `Moved "${card.title}" to ${column}`,
-        user?.email || 'unknown'
+        user?.email || "unknown"
       );
     }
   };
@@ -379,11 +381,11 @@ const Column = ({
       const priorityOrder = { high: 0, medium: 1, low: 2 };
       const aPriority = a.priority ? priorityOrder[a.priority] : 3; // Cards without priority go last
       const bPriority = b.priority ? priorityOrder[b.priority] : 3;
-      
+
       if (aPriority !== bPriority) {
         return aPriority - bPriority;
       }
-      
+
       // If priorities are equal, sort by order
       return (a.order || 0) - (b.order || 0);
     });
@@ -412,9 +414,7 @@ const Column = ({
         onDragLeave={handleDragLeave}
         className={classNames(
           "h-full w-full transition-colors rounded border",
-          active
-            ? "bg-blue-300/5 border-blue-400/50"
-            : "border-transparent"  // Changed from border-neutral-800/0
+          active ? "bg-blue-300/5 border-blue-400/50" : "border-transparent" // Changed from border-neutral-800/0
         )}
       >
         <DropIndicator
@@ -460,19 +460,19 @@ const getTimeAgo = (lastModified: string | undefined, createdAt: string) => {
   const now = new Date();
   const diffTime = Math.abs(now.getTime() - date.getTime());
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays === 0) {
     const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
     if (diffHours === 0) {
       const diffMinutes = Math.floor(diffTime / (1000 * 60));
       if (diffMinutes <= 1) {
-        return 'just now';
+        return "just now";
       }
       return `${diffMinutes}m ago`;
     }
     return `${diffHours}h ago`;
   } else if (diffDays === 1) {
-    return 'yesterday';
+    return "yesterday";
   }
   return `${diffDays} days ago`;
 };
@@ -553,7 +553,9 @@ const Card = ({ ...props }: CardProps) => {
   }, [props.projectId, router]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [userDisplayNames, setUserDisplayNames] = useState<{ [email: string]: string }>({});
+  const [userDisplayNames, setUserDisplayNames] = useState<{
+    [email: string]: string;
+  }>({});
   useEffect(() => {
     const loadDisplayNames = async () => {
       const names: { [email: string]: string } = {};
@@ -594,7 +596,11 @@ const Card = ({ ...props }: CardProps) => {
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-2 items-start justify-between">
             <div className="flex items-center gap-2 flex-1 min-w-[60%]">
-              <IconComponent className={`flex-shrink-0 text-xl ${getPriorityColor(props.priority)}`} />
+              <IconComponent
+                className={`flex-shrink-0 text-xl ${getPriorityColor(
+                  props.priority
+                )}`}
+              />
               <p className="text-xl font-bold text-neutral-100 break-words">
                 {props.title}
               </p>
@@ -602,7 +608,10 @@ const Card = ({ ...props }: CardProps) => {
             <div className="flex flex-wrap items-center gap-2">
               <SizeIndicator size={props.size} style="boxes" />
               {props.priority && <Badge priority={props.priority} />}
-              <AgeBadge lastModified={props.lastModified} createdAt={props.createdAt} />
+              <AgeBadge
+                lastModified={props.lastModified}
+                createdAt={props.createdAt}
+              />
             </div>
           </div>
 
@@ -636,7 +645,8 @@ const Card = ({ ...props }: CardProps) => {
                 <span className="font-bold">
                   Assigned to:{" "}
                   <span className="text-blue-400">
-                    {userDisplayNames[props.assignment.assignedTo] || props.assignment.assignedTo}
+                    {userDisplayNames[props.assignment.assignedTo] ||
+                      props.assignment.assignedTo}
                   </span>
                 </span>
               )}
@@ -644,9 +654,11 @@ const Card = ({ ...props }: CardProps) => {
           </div>
 
           <div className="mt-2 text-xs w-full flex justify-between text-neutral-500">
-            <p>Posted: <br /> {new Date(props.createdAt).toLocaleDateString()}</p>
             <p>
-              {props.lastModified ? 'Updated: ' : 'Unchanged since: '} <br />
+              Posted: <br /> {new Date(props.createdAt).toLocaleDateString()}
+            </p>
+            <p>
+              {props.lastModified ? "Updated: " : "Unchanged since: "} <br />
               {getTimeAgo(props.lastModified, props.createdAt)}
             </p>
           </div>
@@ -715,20 +727,29 @@ const CardOverview = ({
   projectId,
 }: CardOverviewProps) => {
   const { user } = useAuth();
-
   const IconComponent = getTaskIcon(card.taskType);
+
   return (
     <div className="space-y-8 p-4">
-      <div className="flex items-start gap-4">
-        <div className="flex items-start gap-2 flex-1 min-w-0">
-          <IconComponent className={`text-4xl flex-shrink-0 mt-1 ${getPriorityColor(card.priority)}`} />
-          <h2 className="text-4xl font-bold text-neutral-100 break-words">{card.title}</h2>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <IconComponent
+            className={`text-4xl flex-shrink-0 ${getPriorityColor(
+              card.priority
+            )}`}
+          />
+          <h2 className="text-4xl font-bold text-neutral-100 break-words">
+            {card.title}
+          </h2>
         </div>
         <button
           onClick={onEdit}
-          className="text-neutral-400 hover:text-neutral-100 flex-shrink-0 mt-2"
+          className="w-full p-2 rounded border border-neutral-700 bg-neutral-800 text-neutral-400 hover:text-neutral-100 hover:border-neutral-600 hover:bg-neutral-700"
         >
-          <FaIcons.FaPen className="text-2xl" />
+          <span className="flex items-center justify-center gap-1.5">
+            <FaIcons.FaPen />
+            Edit Item
+          </span>
         </button>
       </div>
 
@@ -738,18 +759,25 @@ const CardOverview = ({
           <SizeIndicator size={card.size} style="boxes" />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="block text-sm text-neutral-400 mb-1">Priority</label>
+          <label className="block text-sm text-neutral-400 mb-1">
+            Priority
+          </label>
           <Badge priority={card.priority} />
         </div>
         <div className="flex flex-col gap-1">
           <label className="block text-sm text-neutral-400 mb-1">Status</label>
-          <AgeBadge lastModified={card.lastModified} createdAt={card.createdAt} />
+          <AgeBadge
+            lastModified={card.lastModified}
+            createdAt={card.createdAt}
+          />
         </div>
       </div>
 
       {card.description && (
         <div className="border-t border-neutral-700 pt-4">
-          <label className="block text-sm text-neutral-400 mb-2">Description</label>
+          <label className="block text-sm text-neutral-400 mb-2">
+            Description
+          </label>
           <p className="text-sm font-medium text-neutral-300 whitespace-pre-wrap break-words">
             {card.description}
           </p>
@@ -777,7 +805,9 @@ const CardOverview = ({
       )}
 
       <div className="border-t border-neutral-700 pt-4">
-        <label className="block text-sm text-neutral-400 mb-2">Assignment</label>
+        <label className="block text-sm text-neutral-400 mb-2">
+          Assignment
+        </label>
         <TaskAssignmentOverview
           currentAssignee={card.assignment?.assignedTo || null}
           onAssign={async (email) => {
@@ -790,10 +820,10 @@ const CardOverview = ({
 
             await createLog(
               projectId,
-              'assignment',
-              'took a task',
+              "assignment",
+              "took a task",
               `${email} took "${card.title}"`,
-              user?.email || 'unknown'
+              user?.email || "unknown"
             );
           }}
           onUnassign={async () => {
@@ -806,10 +836,10 @@ const CardOverview = ({
 
             await createLog(
               projectId,
-              'assignment',
-              'abandoned a task',
+              "assignment",
+              "abandoned a task",
               `Abandoned "${card.title}"`,
-              user?.email || 'unknown'
+              user?.email || "unknown"
             );
           }}
           currentUserEmail={user?.email || null}
@@ -818,9 +848,15 @@ const CardOverview = ({
 
       <div className="text-xs text-neutral-500 space-y-1">
         <p>Created by: {card.createdBy.email}</p>
-        <p>Created on: {new Date(card.createdAt).toLocaleDateString()} @ {new Date(card.createdAt).toLocaleTimeString()}</p>
+        <p>
+          Created on: {new Date(card.createdAt).toLocaleDateString()} @{" "}
+          {new Date(card.createdAt).toLocaleTimeString()}
+        </p>
         {card.lastModified && (
-          <p>Last modified: {new Date(card.lastModified).toLocaleDateString()} @ {new Date(card.lastModified).toLocaleTimeString()}</p>
+          <p>
+            Last modified: {new Date(card.lastModified).toLocaleDateString()} @{" "}
+            {new Date(card.lastModified).toLocaleTimeString()}
+          </p>
         )}
       </div>
     </div>
@@ -847,7 +883,9 @@ const CardEdit = ({
   const [description, setDescription] = useState(card.description || "");
   const [priority, setPriority] = useState<Priority>(card.priority || "low"); // Default to low if not set
   const [taskType, setTaskType] = useState<TaskType>(card.taskType || "task"); // Add default here too
-  const [links, setLinks] = useState<{ url: string; title: string }[]>(card.links || []);
+  const [links, setLinks] = useState<{ url: string; title: string }[]>(
+    card.links || []
+  );
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [newLinkTitle, setNewLinkTitle] = useState("");
   const { user } = useAuth();
@@ -872,23 +910,22 @@ const CardEdit = ({
     if (confirm("Are you sure you want to delete this card?")) {
       await createLog(
         projectId,
-        'task',
-        'deleted a task',
+        "task",
+        "deleted a task",
         `Deleted "${card.title}"`,
-        user?.email || 'unknown'
+        user?.email || "unknown"
       );
       await deleteCard(card.id);
       onClose();
     }
   };
 
-
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     const changes: string[] = [];
-    if (title !== card.title) changes.push(`title from "${card.title}" to "${title}"`);
+    if (title !== card.title)
+      changes.push(`title from "${card.title}" to "${title}"`);
     if (description !== (card.description || "")) changes.push("description");
     if (priority !== card.priority) changes.push("priority");
     if (taskType !== (card.taskType || "task")) changes.push("task type"); // Add default here too
@@ -898,14 +935,15 @@ const CardEdit = ({
     if (changes.length > 0) {
       await createLog(
         projectId,
-        'task',
-        'edited a task',
+        "task",
+        "edited a task",
         `Modified ${card.title}: changed ${changes.join(", ")}`,
-        user?.email || 'unknown'
+        user?.email || "unknown"
       );
     }
 
-    const assignmentChanged = assignedMember !== (card.assignment?.assignedTo || "");
+    const assignmentChanged =
+      assignedMember !== (card.assignment?.assignedTo || "");
     const updatedCard: Partial<CardType> = {
       title,
       description,
@@ -932,18 +970,18 @@ const CardEdit = ({
       if (assignedMember) {
         await createLog(
           projectId,
-          'assignment',
-          'assigned a task',
+          "assignment",
+          "assigned a task",
           `Assigned "${title}" to ${assignedMember}`,
-          user?.email || 'unknown'
+          user?.email || "unknown"
         );
       } else {
         await createLog(
           projectId,
-          'assignment',
-          'unassigned a task',
+          "assignment",
+          "unassigned a task",
           `Removed assignment from "${title}"`,
-          user?.email || 'unknown'
+          user?.email || "unknown"
         );
       }
     }
@@ -971,7 +1009,10 @@ const CardEdit = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 h-[80vh] pb-20 overflow-y-scroll pr-9">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-4 h-[80vh] pb-20 overflow-y-scroll pr-9"
+    >
       <div>
         <label className="mb-1 block text-sm text-neutral-400">Title</label>
         <input
@@ -1008,7 +1049,9 @@ const CardEdit = ({
           </select>
         </div>
         <div className="flex-1">
-          <label className="mb-1 block text-sm text-neutral-400">Priority</label>
+          <label className="mb-1 block text-sm text-neutral-400">
+            Priority
+          </label>
           <select
             value={priority}
             onChange={(e) => setPriority(e.target.value as Priority)}
@@ -1247,20 +1290,20 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
       );
       await createLog(
         projectId,
-        'task',
-        'created a new task',
+        "task",
+        "created a new task",
         `Created "${text.trim()}"`,
-        user.email || 'unknown'
+        user.email || "unknown"
       );
 
       // If there's an initial assignment, create assignment log
       if (assignedMember) {
         await createLog(
           projectId,
-          'assignment',
-          'assigned a task',
+          "assignment",
+          "assigned a task",
           `Assigned "${text.trim()}" to ${assignedMember}`,
-          user.email || 'unknown'
+          user.email || "unknown"
         );
       }
 
@@ -1284,16 +1327,32 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
         <span>Add Card</span>
       </motion.button>
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 h-[80vh] pb-20 overflow-y-scroll pr-9"
+        >
           <div>
+            <div className="flex items-center gap-2 mb-8">
+              {getTaskIcon(taskType)({
+                className: `text-4xl flex-shrink-0 ${getPriorityColor(
+                  priority
+                )}`,
+              })}
+              <h2 className="text-4xl font-bold text-neutral-100">
+                Add New Item
+              </h2>
+            </div>
             <label className="mb-1 block text-sm text-neutral-400">Title</label>
             <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
               className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+              placeholder="Enter title..."
+              autoFocus
             />
           </div>
+          {/* Rest of the form fields remain the same, just updating the className structure to match CardEdit */}
           <div>
             <label className="mb-1 block text-sm text-neutral-400">Type</label>
             <select
@@ -1308,7 +1367,9 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="mb-1 block text-sm text-neutral-400">Size</label>
+              <label className="mb-1 block text-sm text-neutral-400">
+                Size
+              </label>
               <select
                 value={size}
                 onChange={(e) => setSize(e.target.value as Size)}
@@ -1321,7 +1382,9 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
               </select>
             </div>
             <div className="flex-1">
-              <label className="mb-1 block text-sm text-neutral-400">Priority</label>
+              <label className="mb-1 block text-sm text-neutral-400">
+                Priority
+              </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as Priority)}
@@ -1345,7 +1408,9 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-neutral-400">Assignment</label>
+            <label className="mb-1 block text-sm text-neutral-400">
+              Assignment
+            </label>
             <TaskAssignment
               currentAssignee={assignedMember}
               projectMembers={projectMembers}
@@ -1359,7 +1424,7 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
             </label>
             <input
               type="text"
-              value={user?.email || ''}
+              value={user?.email || ""}
               readOnly
               className="w-full rounded border border-neutral-700 bg-neutral-900/50 p-2 text-neutral-400 pointer-events-none"
             />
@@ -1383,15 +1448,15 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-3 py-1.5 text-xs text-neutral-400 hover:text-neutral-50"
+              className="px-4 py-2 text-sm text-neutral-400 hover:text-neutral-100"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="rounded bg-blue-500 px-3 py-1.5 text-xs text-white hover:bg-blue-600"
+              className="rounded bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600"
             >
-              Add Card
+              Create Task
             </button>
           </div>
         </form>
@@ -1406,11 +1471,19 @@ type Priority = "low" | "medium" | "high";
 type Age = "recent" | "aging" | "stale";
 
 // Add this new component after the Badge component
-const AgeBadge = ({ lastModified, createdAt }: { lastModified?: string, createdAt: string }) => {
+const AgeBadge = ({
+  lastModified,
+  createdAt,
+}: {
+  lastModified?: string;
+  createdAt: string;
+}) => {
   const getAge = (lastModified: string | undefined, createdAt: string): Age => {
     const date = lastModified ? new Date(lastModified) : new Date(createdAt);
     const now = new Date();
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+    );
     if (diffDays <= 2) return "recent";
     if (diffDays <= 5) return "aging";
     return "stale";
@@ -1447,7 +1520,9 @@ const TaskAssignment = ({
   onAssign: (email: string) => void;
   onUnassign: () => void;
 }) => {
-  const [userDisplayNames, setUserDisplayNames] = useState<{ [email: string]: string }>({});
+  const [userDisplayNames, setUserDisplayNames] = useState<{
+    [email: string]: string;
+  }>({});
   useEffect(() => {
     const loadDisplayNames = async () => {
       const names: { [email: string]: string } = {};
@@ -1478,7 +1553,9 @@ const TaskAssignment = ({
               onChange={() => onAssign(member)}
               className="hidden"
             />
-            <span className="text-neutral-200">{userDisplayNames[member] || member}</span>
+            <span className="text-neutral-200">
+              {userDisplayNames[member] || member}
+            </span>
             {currentAssignee === member && (
               <span className="ml-auto text-xs text-blue-400">Assigned</span>
             )}
