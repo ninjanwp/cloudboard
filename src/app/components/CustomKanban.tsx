@@ -25,14 +25,9 @@ import { useAuth } from "../context/AuthContext";
 import { Badge } from "./Badge"; // We'll create this component
 import classNames from "classnames";
 import * as FaIcons from "react-icons/fa6";
-import { IconSelector } from "./IconSelector";
 import { getUserDisplayName } from "../utils/userUtils";
 import { createLog } from "../utils/logUtils";
 import { SizeIndicator } from "./SizeIndicator"; // Update import
-
-const iconOptions = Object.keys(FaIcons).map((key) => ({
-  name: key,
-}));
 
 const GridBackground = () => (
   <motion.div
@@ -721,40 +716,6 @@ const CardOverview = ({
 }: CardOverviewProps) => {
   const { user } = useAuth();
 
-  const handleAssign = async (email: string) => {
-    await updateCard(card.id, {
-      assignment: {
-        assignedTo: email,
-        assignedAt: new Date().toISOString(),
-      },
-    });
-
-    await createLog(
-      projectId,
-      'assignment',
-      'took a task',
-      `${email} took "${card.title}"`,
-      user?.email || 'unknown'
-    );
-  };
-
-  const handleUnassign = async () => {
-    await updateCard(card.id, {
-      assignment: {
-        assignedTo: null,
-        assignedAt: new Date().toISOString(),
-      },
-    });
-
-    await createLog(
-      projectId,
-      'assignment',
-      'abandoned a task',
-      `Abandoned "${card.title}"`,
-      user?.email || 'unknown'
-    );
-  };
-
   const IconComponent = getTaskIcon(card.taskType);
   return (
     <div className="space-y-8 p-4">
@@ -819,8 +780,38 @@ const CardOverview = ({
         <label className="block text-sm text-neutral-400 mb-2">Assignment</label>
         <TaskAssignmentOverview
           currentAssignee={card.assignment?.assignedTo || null}
-          onAssign={handleAssign}
-          onUnassign={handleUnassign}
+          onAssign={async (email) => {
+            await updateCard(card.id, {
+              assignment: {
+                assignedTo: email,
+                assignedAt: new Date().toISOString(),
+              },
+            });
+
+            await createLog(
+              projectId,
+              'assignment',
+              'took a task',
+              `${email} took "${card.title}"`,
+              user?.email || 'unknown'
+            );
+          }}
+          onUnassign={async () => {
+            await updateCard(card.id, {
+              assignment: {
+                assignedTo: null,
+                assignedAt: new Date().toISOString(),
+              },
+            });
+
+            await createLog(
+              projectId,
+              'assignment',
+              'abandoned a task',
+              `Abandoned "${card.title}"`,
+              user?.email || 'unknown'
+            );
+          }}
           currentUserEmail={user?.email || null}
         />
       </div>
@@ -891,13 +882,7 @@ const CardEdit = ({
     }
   };
 
-  const handleAssign = async (email: string) => {
-    setAssignedMember(email);
-  };
 
-  const handleUnassign = async () => {
-    setAssignedMember("");
-  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

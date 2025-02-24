@@ -1,4 +1,4 @@
-import { collection, query, orderBy, limit, getDocs, startAfter, where, QueryConstraint, DocumentSnapshot, DocumentData } from "firebase/firestore";
+import { collection, query, orderBy, limit, getDocs, startAfter, where, DocumentSnapshot, DocumentData } from "firebase/firestore";
 import { useEffect, useState, useCallback } from "react";
 import { db } from "../../../firebase";
 import { LogEntry, getLogIcon, formatLogDate, LogType } from "../utils/logUtils";
@@ -22,13 +22,14 @@ export const ActivityLogs = ({ projectId }: { projectId: string }) => {
   ] as const;
 
   const fetchLogs = useCallback(async (loadMore = false) => {
+    if (!projectId) return; // Add guard clause
+    
     setIsLoading(true);
     try {
       const logsRef = collection(db, `projects/${projectId}/logs`);
       
       let q;
       if (selectedType) {
-        // When filtering by type, include both type filter and timestamp ordering
         q = query(
           logsRef,
           where('type', '==', selectedType),
@@ -36,7 +37,6 @@ export const ActivityLogs = ({ projectId }: { projectId: string }) => {
           limit(ITEMS_PER_PAGE + 1)
         );
       } else {
-        // When showing all, just use timestamp order
         q = query(
           logsRef,
           orderBy('timestamp', 'desc'),
@@ -49,8 +49,7 @@ export const ActivityLogs = ({ projectId }: { projectId: string }) => {
       }
 
       const querySnapshot = await getDocs(q);
-      
-      let docs = querySnapshot.docs;
+      const docs = querySnapshot.docs;
       
       setHasMore(docs.length > ITEMS_PER_PAGE);
       
@@ -63,7 +62,10 @@ export const ActivityLogs = ({ projectId }: { projectId: string }) => {
         id: doc.id,
       }));
 
-      setLastVisible(docs[docs.length - 1] || null);
+      if (docs.length > 0) {
+        setLastVisible(docs[docs.length - 1]);
+      }
+
       setLogs(prev => loadMore ? [...prev, ...logsData] : logsData);
 
       // Fetch usernames for new logs
@@ -77,18 +79,19 @@ export const ActivityLogs = ({ projectId }: { projectId: string }) => {
       setUserNames(names);
     } catch (error) {
       console.error("Error fetching logs:", error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  }, [projectId, selectedType, lastVisible]);
+  }, [projectId, selectedType, lastVisible, userNames, ITEMS_PER_PAGE]);
 
   useEffect(() => {
     if (projectId) {
-      setLogs([]); // Clear logs when filter changes
+      setLogs([]);
       setLastVisible(null);
       setHasMore(true);
       fetchLogs();
     }
-  }, [projectId, selectedType]);
+  }, [projectId, selectedType]); // Remove fetchLogs from dependencies
 
   const handleLoadMore = () => {
     fetchLogs(true);
