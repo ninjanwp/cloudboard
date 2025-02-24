@@ -28,10 +28,10 @@ import * as FaIcons from "react-icons/fa6";
 import { IconSelector } from "./IconSelector";
 import { getUserDisplayName } from "../utils/userUtils";
 import { createLog } from "../utils/logUtils";
+import { SizeIndicator } from "./SizeIndicator"; // Update import
 
 const iconOptions = Object.keys(FaIcons).map((key) => ({
   name: key,
-  icon: (FaIcons as { [key: string]: React.ComponentType })[key],
 }));
 
 const GridBackground = () => (
@@ -117,7 +117,12 @@ const Board = ({
     const unsubscribe = onSnapshot(cardsRef, (snapshot) => {
       const cardsData: CardType[] = [];
       snapshot.forEach((doc) => {
-        cardsData.push({ id: doc.id, ...doc.data() } as CardType);
+        // Add default taskType if it doesn't exist
+        const data = doc.data();
+        if (!data.taskType) {
+          data.taskType = 'task'; // Set default value
+        }
+        cardsData.push({ id: doc.id, ...data } as CardType);
       });
       setCards(cardsData);
     });
@@ -285,11 +290,13 @@ const Column = ({
         ...card,
         column,
         order: newOrder,
+        lastModified: new Date().toISOString(), // Add this line
       };
 
       await updateCard(cardId, {
         column,
         order: newOrder,
+        lastModified: new Date().toISOString(), // Add this line
       });
 
       setCards((prevCards) => {
@@ -369,10 +376,22 @@ const Column = ({
     setActive(false);
   };
 
-  // Sort filtered cards by order
+  // Sort filtered cards by priority and order
   const filteredCards = cards
     .filter((c) => c.column === column)
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
+    .sort((a, b) => {
+      // First sort by priority
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      const aPriority = a.priority ? priorityOrder[a.priority] : 3; // Cards without priority go last
+      const bPriority = b.priority ? priorityOrder[b.priority] : 3;
+      
+      if (aPriority !== bPriority) {
+        return aPriority - bPriority;
+      }
+      
+      // If priorities are equal, sort by order
+      return (a.order || 0) - (b.order || 0);
+    });
 
   return (
     <div className="flex-grow w-56 shrink-0 px-2">
@@ -440,10 +459,85 @@ type CardProps = CardType & {
   projectId: string;
 };
 
+// Add this utility function before the Card component
+const getTimeAgo = (lastModified: string | undefined, createdAt: string) => {
+  const date = lastModified ? new Date(lastModified) : new Date(createdAt);
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    const diffHours = Math.floor(diffTime / (1000 * 60 * 60));
+    if (diffHours === 0) {
+      const diffMinutes = Math.floor(diffTime / (1000 * 60));
+      if (diffMinutes <= 1) {
+        return 'just now';
+      }
+      return `${diffMinutes}m ago`;
+    }
+    return `${diffHours}h ago`;
+  } else if (diffDays === 1) {
+    return 'yesterday';
+  }
+  return `${diffDays} days ago`;
+};
+
+// Add this utility function to get task icon component
+const getTaskIcon = (taskType: TaskType) => {
+  switch (taskType) {
+    case "bug":
+      return FaIcons.FaBug;
+    case "feature":
+      return FaIcons.FaStar;
+    case "task":
+    default:
+      return FaIcons.FaSquareCheck;
+  }
+};
+
+// Add this utility function near the other utility functions
+const getPriorityColor = (priority: Priority) => {
+  switch (priority) {
+    case "high":
+      return "text-red-400";
+    case "medium":
+      return "text-yellow-400";
+    case "low":
+      return "text-blue-400";
+    default:
+      return "text-neutral-400";
+  }
+};
+
+// Add these types near your other type definitions
+type Size = "S" | "M" | "L" | "XL";
+
+type CardType = {
+  title: string;
+  id: string;
+  column: ColumnType;
+  createdAt: string;
+  description?: string;
+  priority: Priority;
+  taskType: TaskType; // Add this instead of icon
+  createdBy: {
+    uid: string;
+    email: string;
+  };
+  lastModified?: string;
+  order?: number;
+  links?: { url: string; title: string }[];
+  assignment?: {
+    assignedTo: string | null;
+    assignedAt: string;
+  };
+  size: Size;
+};
+
 const Card = ({ ...props }: CardProps) => {
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
   const router = useRouter();
-
+  const IconComponent = getTaskIcon(props.taskType);
   useEffect(() => {
     const fetchProjectMembers = async () => {
       try {
@@ -462,11 +556,9 @@ const Card = ({ ...props }: CardProps) => {
     };
     fetchProjectMembers();
   }, [props.projectId, router]);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [userDisplayNames, setUserDisplayNames] = useState<{ [email: string]: string }>({});
-
   useEffect(() => {
     const loadDisplayNames = async () => {
       const names: { [email: string]: string } = {};
@@ -483,10 +575,6 @@ const Card = ({ ...props }: CardProps) => {
     setIsModalOpen(true);
   };
 
-  const IconComponent =
-    iconOptions.find((option) => option.name === props.icon)?.icon ||
-    FaIcons.FaStar;
-
   return (
     <>
       <motion.div
@@ -500,61 +588,75 @@ const Card = ({ ...props }: CardProps) => {
             id: props.id,
             column: props.column,
             createdAt: props.createdAt,
-            icon: props.icon,
+            taskType: props.taskType,
             createdBy: props.createdBy,
+            priority: props.priority,
+            size: props.size,
           })
         }
-        className="cursor-grab rounded border border-neutral-700 bg-neutral-800 p-3 hover:border-neutral-600 active:cursor-grabbing select-none"  // Added select-none
+        className="cursor-grab rounded border border-neutral-700 bg-neutral-800 p-3 hover:border-neutral-600 active:cursor-grabbing select-none"
       >
-        <div className="flex justify-between items-start">
-          <div className="flex items-center gap-2">
-            <IconComponent className="text-neutral-100 font-bold text-2xl" />
-            <p className="text-xl font-bold text-neutral-100">{props.title}</p>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2 items-start justify-between">
+            <div className="flex items-center gap-2 flex-1 min-w-[60%]">
+              <IconComponent className={`flex-shrink-0 text-xl ${getPriorityColor(props.priority)}`} />
+              <p className="text-xl font-bold text-neutral-100 break-words">
+                {props.title}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <SizeIndicator size={props.size} style="boxes" />
+              {props.priority && <Badge priority={props.priority} />}
+              <AgeBadge lastModified={props.lastModified} createdAt={props.createdAt} />
+            </div>
           </div>
-          <p className="text-sm text-neutral-400 capitalize">
-            {props.priority && <Badge priority={props.priority} />}
-          </p>
-        </div>
-        {props.description && (
-          <p className="mt-2 line-clamp-5 text-xs text-neutral-400 whitespace-pre-wrap break-words">
-            {props.description}
-          </p>
-        )}
-        {props.links && props.links.length > 0 && (
-          <div className="mt-2 space-y-1 w-min">
-            {props.links.map((link, index) => (
-              <a
-                key={index}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300"
-              >
-                <FaIcons.FaLink className="text-[10px]" />
-                <span className="truncate">{link.title || link.url}</span>
-              </a>
-            ))}
-          </div>
-        )}
-        <div className="mt-2 flex items-center justify-between text-xs">
-          <div className="text-neutral-400">
-            {props.assignment?.assignedTo && (
-              <span className="font-bold">
-                Assigned to:{" "}
-                <span className="text-blue-400">
-                  {userDisplayNames[props.assignment.assignedTo] || props.assignment.assignedTo}
+
+          {props.description && (
+            <p className="mt-2 line-clamp-5 text-xs text-neutral-400 whitespace-pre-wrap break-words">
+              {props.description}
+            </p>
+          )}
+
+          {props.links && props.links.length > 0 && (
+            <div className="mt-2 space-y-1 w-min">
+              {props.links.map((link, index) => (
+                <a
+                  key={index}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300"
+                >
+                  <FaIcons.FaLink className="text-[10px]" />
+                  <span className="truncate">{link.title || link.url}</span>
+                </a>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-2 flex items-center justify-between text-xs">
+            <div className="text-neutral-400">
+              {props.assignment?.assignedTo && (
+                <span className="font-bold">
+                  Assigned to:{" "}
+                  <span className="text-blue-400">
+                    {userDisplayNames[props.assignment.assignedTo] || props.assignment.assignedTo}
+                  </span>
                 </span>
-              </span>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-        <div className="mt-2 text-xs flex flex-col gap-1 text-neutral-500">
-          <p>Posted: {new Date(props.createdAt).toLocaleDateString()}</p>
-          {/* <p>Posted by: {props.createdBy.email}</p> */}
+
+          <div className="mt-2 text-xs w-full flex justify-between text-neutral-500">
+            <p>Posted: <br /> {new Date(props.createdAt).toLocaleDateString()}</p>
+            <p>
+              {props.lastModified ? 'Updated: ' : 'Unchanged since: '} <br />
+              {getTimeAgo(props.lastModified, props.createdAt)}
+            </p>
+          </div>
         </div>
       </motion.div>
-
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         {isEditing ? (
           <CardEdit
@@ -566,9 +668,10 @@ const Card = ({ ...props }: CardProps) => {
               createdBy: props.createdBy,
               createdAt: props.createdAt,
               priority: props.priority,
-              icon: props.icon,
+              taskType: props.taskType,
               links: props.links,
               assignment: props.assignment,
+              size: props.size,
             }}
             onClose={() => {
               setIsEditing(false);
@@ -588,9 +691,10 @@ const Card = ({ ...props }: CardProps) => {
               createdBy: props.createdBy,
               createdAt: props.createdAt,
               priority: props.priority,
-              icon: props.icon,
+              taskType: props.taskType,
               links: props.links,
               assignment: props.assignment,
+              size: props.size,
             }}
             onEdit={() => setIsEditing(true)}
             updateCard={props.updateCard}
@@ -651,33 +755,68 @@ const CardOverview = ({
     );
   };
 
-  const IconComponent =
-    iconOptions.find((option) => option.name === card.icon)?.icon ||
-    FaIcons.FaStar;
-
+  const IconComponent = getTaskIcon(card.taskType);
   return (
     <div className="space-y-8 p-4">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <IconComponent className="text-neutral-100 text-4xl flex-shrink-0" />
-          <h2 className="text-4xl font-bold text-neutral-100 break-words overflow-hidden">{card.title}</h2>
+      <div className="flex items-start gap-4">
+        <div className="flex items-start gap-2 flex-1 min-w-0">
+          <IconComponent className={`text-4xl flex-shrink-0 mt-1 ${getPriorityColor(card.priority)}`} />
+          <h2 className="text-4xl font-bold text-neutral-100 break-words">{card.title}</h2>
         </div>
         <button
           onClick={onEdit}
-          className="text-neutral-400 flex gap-2 justify-center items-center text-2xl hover:text-neutral-100 flex-shrink-0"
+          className="text-neutral-400 hover:text-neutral-100 flex-shrink-0 mt-2"
         >
-          <FaIcons.FaPen />
+          <FaIcons.FaPen className="text-2xl" />
         </button>
       </div>
 
-      {/* Priority and other existing sections */}
-      {/* ...existing code... */}
+      <div className="flex items-start justify-start gap-4">
+        <div className="flex flex-col gap-1">
+          <label className="block text-sm text-neutral-400 mb-1">Size</label>
+          <SizeIndicator size={card.size} style="boxes" />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="block text-sm text-neutral-400 mb-1">Priority</label>
+          <Badge priority={card.priority} />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="block text-sm text-neutral-400 mb-1">Status</label>
+          <AgeBadge lastModified={card.lastModified} createdAt={card.createdAt} />
+        </div>
+      </div>
 
-      {/* Assignment Section */}
+      {card.description && (
+        <div className="border-t border-neutral-700 pt-4">
+          <label className="block text-sm text-neutral-400 mb-2">Description</label>
+          <p className="text-sm font-medium text-neutral-300 whitespace-pre-wrap break-words">
+            {card.description}
+          </p>
+        </div>
+      )}
+
+      {card.links && card.links.length > 0 && (
+        <div className="border-t border-neutral-700 pt-4">
+          <label className="block text-sm text-neutral-400 mb-2">Links</label>
+          <div className="space-y-2">
+            {card.links.map((link, index) => (
+              <a
+                key={index}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300"
+              >
+                <FaIcons.FaLink className="text-xs" />
+                <span>{link.title || link.url}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="border-t border-neutral-700 pt-4">
-        <p className="text-sm font-medium text-neutral-300 mb-2 whitespace-pre-wrap break-words">
-          {card.description}
-        </p>
+        <label className="block text-sm text-neutral-400 mb-2">Assignment</label>
         <TaskAssignmentOverview
           currentAssignee={card.assignment?.assignedTo || null}
           onAssign={handleAssign}
@@ -686,15 +825,12 @@ const CardOverview = ({
         />
       </div>
 
-      {/* Creator info section */}
-      <div className="text-xs text-neutral-500">
+      <div className="text-xs text-neutral-500 space-y-1">
         <p>Created by: {card.createdBy.email}</p>
-        <p>
-          Created on:{" "}
-          {new Date(card.createdAt).toLocaleDateString() +
-            " @ " +
-            new Date(card.createdAt).toLocaleTimeString()}
-        </p>
+        <p>Created on: {new Date(card.createdAt).toLocaleDateString()} @ {new Date(card.createdAt).toLocaleTimeString()}</p>
+        {card.lastModified && (
+          <p>Last modified: {new Date(card.lastModified).toLocaleDateString()} @ {new Date(card.lastModified).toLocaleTimeString()}</p>
+        )}
       </div>
     </div>
   );
@@ -718,8 +854,8 @@ const CardEdit = ({
 }: CardEditProps) => {
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description || "");
-  const [priority, setPriority] = useState<Priority | "">(card.priority || "");
-  const [selectedIcon, setSelectedIcon] = useState(card.icon);
+  const [priority, setPriority] = useState<Priority>(card.priority || "low"); // Default to low if not set
+  const [taskType, setTaskType] = useState<TaskType>(card.taskType || "task"); // Add default here too
   const [links, setLinks] = useState<{ url: string; title: string }[]>(card.links || []);
   const [newLinkUrl, setNewLinkUrl] = useState("");
   const [newLinkTitle, setNewLinkTitle] = useState("");
@@ -728,6 +864,7 @@ const CardEdit = ({
   const [assignedMember, setAssignedMember] = useState<string>(
     card.assignment?.assignedTo || ""
   );
+  const [size, setSize] = useState<Size>(card.size || "M");
 
   useEffect(() => {
     const fetchProjectMembers = async () => {
@@ -769,7 +906,8 @@ const CardEdit = ({
     if (title !== card.title) changes.push(`title from "${card.title}" to "${title}"`);
     if (description !== (card.description || "")) changes.push("description");
     if (priority !== card.priority) changes.push("priority");
-    if (selectedIcon !== card.icon) changes.push("icon");
+    if (taskType !== (card.taskType || "task")) changes.push("task type"); // Add default here too
+    if (size !== card.size) changes.push("size");
 
     // Log all changes if any were made
     if (changes.length > 0) {
@@ -786,8 +924,9 @@ const CardEdit = ({
     const updatedCard: Partial<CardType> = {
       title,
       description,
-      icon: selectedIcon,
+      taskType: taskType || "task", // Ensure taskType is never undefined
       links,
+      priority, // Always included now
       lastModified: new Date().toISOString(),
       assignment: assignedMember
         ? {
@@ -798,15 +937,12 @@ const CardEdit = ({
             assignedTo: null,
             assignedAt: new Date().toISOString(),
           },
+      size,
     };
-
-    if (priority) {
-      updatedCard.priority = priority as Priority;
-    }
 
     await updateCard(card.id, updatedCard);
 
-    // Log assignment changes
+    // Log assignment changes if any
     if (assignmentChanged) {
       if (assignedMember) {
         await createLog(
@@ -850,10 +986,7 @@ const CardEdit = ({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 h-[80vh] pb-20 overflow-y-scroll pr-9"
-    >
+    <form onSubmit={handleSubmit} className="space-y-4 h-[80vh] pb-20 overflow-y-scroll pr-9">
       <div>
         <label className="mb-1 block text-sm text-neutral-400">Title</label>
         <input
@@ -864,17 +997,43 @@ const CardEdit = ({
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm text-neutral-400">Priority</label>
+        <label className="mb-1 block text-sm text-neutral-400">Type</label>
         <select
-          value={priority}
-          onChange={(e) => setPriority(e.target.value as Priority | "")}
+          value={taskType}
+          onChange={(e) => setTaskType(e.target.value as TaskType)}
           className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
         >
-          <option value="">None</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
+          <option value="task">Task (Simple, 1-2 hours)</option>
+          <option value="bug">Bug</option>
+          <option value="feature">Feature (Complex)</option>
         </select>
+      </div>
+      <div className="flex gap-4">
+        <div className="flex-1">
+          <label className="mb-1 block text-sm text-neutral-400">Size</label>
+          <select
+            value={size}
+            onChange={(e) => setSize(e.target.value as Size)}
+            className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+          >
+            <option value="S">Small</option>
+            <option value="M">Medium</option>
+            <option value="L">Large</option>
+            <option value="XL">Extra Large</option>
+          </select>
+        </div>
+        <div className="flex-1">
+          <label className="mb-1 block text-sm text-neutral-400">Priority</label>
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value as Priority)}
+            className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
       </div>
       <div>
         <label className="mb-1 block text-sm text-neutral-400">
@@ -885,13 +1044,6 @@ const CardEdit = ({
           onChange={(e) => setDescription(e.target.value)}
           rows={7}
           className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm text-neutral-400">Icon</label>
-        <IconSelector
-          selectedIcon={selectedIcon}
-          setSelectedIcon={setSelectedIcon}
         />
       </div>
       <div>
@@ -962,8 +1114,8 @@ const CardEdit = ({
         <TaskAssignment
           currentAssignee={assignedMember}
           projectMembers={projectMembers}
-          onAssign={handleAssign}
-          onUnassign={handleUnassign}
+          onAssign={(email) => setAssignedMember(email)}
+          onUnassign={() => setAssignedMember("")}
         />
       </div>
       <div>
@@ -1047,11 +1199,12 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [text, setText] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedIcon, setSelectedIcon] = useState(iconOptions[0].name);
-  const [priority, setPriority] = useState<Priority | "">("");
+  const [taskType, setTaskType] = useState<TaskType>("task");
+  const [priority, setPriority] = useState<Priority>("low"); // Changed to always have a priority
   const { user } = useAuth();
   const [assignedMember, setAssignedMember] = useState<string | null>(null);
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
+  const [size, setSize] = useState<Size>("M");
 
   useEffect(() => {
     const fetchProjectMembers = async () => {
@@ -1073,7 +1226,6 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
     const columnCards = cards
       .filter((c) => c.column === column)
       .sort((a, b) => (a.order || 0) - (b.order || 0));
-
     const newOrder =
       columnCards.length > 0
         ? (columnCards[columnCards.length - 1].order || 0) + 1000
@@ -1087,23 +1239,21 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
       column,
       title: text.trim(),
       description: description.trim(),
-      icon: selectedIcon,
+      taskType,
       id: newCardId,
       createdAt: new Date().toISOString(),
       createdBy: {
         uid: user.uid,
-        email: user.email || "", 
+        email: user.email || "",
       },
       order: newOrder,
+      priority: priority, // Always included now
       assignment: {
         assignedTo: assignedMember,
         assignedAt: new Date().toISOString(),
       },
+      size,
     };
-
-    if (priority) {
-      newCard.priority = priority as Priority;
-    }
 
     try {
       await setDoc(
@@ -1132,7 +1282,7 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
       setIsModalOpen(false);
       setText("");
       setDescription("");
-      setPriority("");
+      setPriority("low");
     } catch (error) {
       console.error("Error adding card:", error);
     }
@@ -1146,6 +1296,7 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
         className="flex w-full justify-center items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-400 transition-colors hover:text-neutral-50 hover:bg-neutral-700 border border-neutral-700 rounded"
       >
         <FiPlus />
+        <span>Add Card</span>
       </motion.button>
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -1159,6 +1310,45 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
             />
           </div>
           <div>
+            <label className="mb-1 block text-sm text-neutral-400">Type</label>
+            <select
+              value={taskType}
+              onChange={(e) => setTaskType(e.target.value as TaskType)}
+              className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+            >
+              <option value="task">Task (Simple, 1-2 hours)</option>
+              <option value="bug">Bug</option>
+              <option value="feature">Feature (Complex)</option>
+            </select>
+          </div>
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <label className="mb-1 block text-sm text-neutral-400">Size</label>
+              <select
+                value={size}
+                onChange={(e) => setSize(e.target.value as Size)}
+                className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+              >
+                <option value="S">Small</option>
+                <option value="M">Medium</option>
+                <option value="L">Large</option>
+                <option value="XL">Extra Large</option>
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="mb-1 block text-sm text-neutral-400">Priority</label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as Priority)}
+                className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+          </div>
+          <div>
             <label className="mb-1 block text-sm text-neutral-400">
               Description
             </label>
@@ -1170,31 +1360,7 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-neutral-400">
-              Priority
-            </label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as Priority | "")}
-              className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
-            >
-              <option value="">None</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-            </select>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-neutral-400">Icon</label>
-            <IconSelector
-              selectedIcon={selectedIcon}
-              setSelectedIcon={setSelectedIcon}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-neutral-400">
-              Assignment
-            </label>
+            <label className="mb-1 block text-sm text-neutral-400">Assignment</label>
             <TaskAssignment
               currentAssignee={assignedMember}
               projectMembers={projectMembers}
@@ -1202,7 +1368,33 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
               onUnassign={() => setAssignedMember(null)}
             />
           </div>
-          <div className="flex justify-end gap-2">
+          <div>
+            <label className="mb-1 block text-sm text-neutral-400">
+              Created by
+            </label>
+            <input
+              type="text"
+              value={user?.email || ''}
+              readOnly
+              className="w-full rounded border border-neutral-700 bg-neutral-900/50 p-2 text-neutral-400 pointer-events-none"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm text-neutral-400">
+              Created on
+            </label>
+            <input
+              type="text"
+              value={
+                new Date().toLocaleDateString() +
+                " @ " +
+                new Date().toLocaleTimeString()
+              }
+              readOnly
+              className="w-full rounded border border-neutral-700 bg-neutral-900/50 p-2 text-neutral-400 pointer-events-none"
+            />
+          </div>
+          <div className="flex justify-between h-18 absolute bottom-0 left-0 w-full p-4 rounded bg-neutral-800">
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
@@ -1224,29 +1416,40 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
 };
 
 type ColumnType = "backlog" | "todo" | "doing" | "done";
-
-type CardType = {
-  title: string;
-  id: string;
-  column: ColumnType;
-  createdAt: string;
-  description?: string;
-  priority?: Priority;
-  icon: string;
-  createdBy: {
-    uid: string;
-    email: string;
-  };
-  lastModified?: string;
-  order?: number; // Add this field
-  links?: { url: string; title: string }[];
-  assignment?: {
-    assignedTo: string | null; // Changed to string | null instead of undefined
-    assignedAt: string;
-  };
-};
-
+type TaskType = "task" | "bug" | "feature";
 type Priority = "low" | "medium" | "high";
+type Age = "recent" | "aging" | "stale";
+
+// Add this new component after the Badge component
+const AgeBadge = ({ lastModified, createdAt }: { lastModified?: string, createdAt: string }) => {
+  const getAge = (lastModified: string | undefined, createdAt: string): Age => {
+    const date = lastModified ? new Date(lastModified) : new Date(createdAt);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays <= 2) return "recent";
+    if (diffDays <= 5) return "aging";
+    return "stale";
+  };
+
+  const age = getAge(lastModified, createdAt);
+  const bgColor = {
+    recent: "bg-green-500/20 text-green-400 border-green-500/30",
+    aging: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+    stale: "bg-red-500/20 text-red-400 border-red-500/30",
+  }[age];
+
+  const label = {
+    recent: "Recent",
+    aging: "Aging",
+    stale: "Stale",
+  }[age];
+
+  return (
+    <span className={`text-xs px-2 py-1 rounded-full border ${bgColor}`}>
+      {label}
+    </span>
+  );
+};
 
 const TaskAssignment = ({
   currentAssignee,
@@ -1260,7 +1463,6 @@ const TaskAssignment = ({
   onUnassign: () => void;
 }) => {
   const [userDisplayNames, setUserDisplayNames] = useState<{ [email: string]: string }>({});
-
   useEffect(() => {
     const loadDisplayNames = async () => {
       const names: { [email: string]: string } = {};

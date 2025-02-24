@@ -1,62 +1,76 @@
-import { collection, query, orderBy, limit, startAfter, getDocs, QueryDocumentSnapshot } from "firebase/firestore";
+import { collection, query, orderBy, limit, getDocs, startAfter, where, QueryConstraint, DocumentSnapshot, DocumentData } from "firebase/firestore";
 import { useEffect, useState, useCallback } from "react";
 import { db } from "../../../firebase";
-import { LogEntry, LogType, getLogIcon, formatLogDate } from "../utils/logUtils";
+import { LogEntry, getLogIcon, formatLogDate, LogType } from "../utils/logUtils";
 import { getUserDisplayName } from "../utils/userUtils";
-import { FaChevronRight } from "react-icons/fa6";
 
 export const ActivityLogs = ({ projectId }: { projectId: string }) => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [selectedType, setSelectedType] = useState<LogType | 'all'>('all');
-  const [userNames, setUserNames] = useState<{[key: string]: string}>({});
-  const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
-  const logsPerPage = 10;
+  const [userNames, setUserNames] = useState<{[key: string]: string}>({});
+  const [lastVisible, setLastVisible] = useState<DocumentSnapshot<DocumentData> | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [selectedType, setSelectedType] = useState<LogType | null>(null);
+  const ITEMS_PER_PAGE = 20;
 
-  // Function to fetch logs
-  const fetchLogs = useCallback(async (isNewQuery: boolean = false) => {
+  const LOG_TYPES: Array<{ label: string; value: LogType | null }> = [
+    { label: 'All', value: null },
+    { label: '📝 Tasks', value: 'task' },
+    { label: '👥 Members', value: 'member' },
+    { label: '📊 Project', value: 'project' },
+    { label: '✅ Assignments', value: 'assignment' },
+  ] as const;
+
+  const fetchLogs = useCallback(async (loadMore = false) => {
     setIsLoading(true);
     try {
       const logsRef = collection(db, `projects/${projectId}/logs`);
-      let q = query(
-        logsRef,
-        orderBy('timestamp', 'desc'),
-        limit(logsPerPage)
-      );
-
-      if (!isNewQuery && lastDoc) {
+      
+      let q;
+      if (selectedType) {
+        // When filtering by type, include both type filter and timestamp ordering
+        q = query(
+          logsRef,
+          where('type', '==', selectedType),
+          orderBy('timestamp', 'desc'),
+          limit(ITEMS_PER_PAGE + 1)
+        );
+      } else {
+        // When showing all, just use timestamp order
         q = query(
           logsRef,
           orderBy('timestamp', 'desc'),
-          startAfter(lastDoc),
-          limit(logsPerPage)
+          limit(ITEMS_PER_PAGE + 1)
         );
       }
 
-      const snapshot = await getDocs(q);
-      const logsData: LogEntry[] = [];
-      const actors = new Set<string>();
-
-      snapshot.forEach((doc) => {
-        const data = doc.data() as LogEntry;
-        logsData.push(data);
-        actors.add(data.actor);
-      });
-
-      if (isNewQuery) {
-        setLogs(logsData);
-      } else {
-        setLogs(prevLogs => [...prevLogs, ...logsData]);
+      if (loadMore && lastVisible) {
+        q = query(q, startAfter(lastVisible));
       }
 
-      setHasMore(snapshot.docs.length === logsPerPage);
-      setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+      const querySnapshot = await getDocs(q);
+      
+      let docs = querySnapshot.docs;
+      
+      setHasMore(docs.length > ITEMS_PER_PAGE);
+      
+      const logsData = docs.slice(0, ITEMS_PER_PAGE).map(doc => ({
+        type: doc.data().type as LogType,
+        action: doc.data().action as string,
+        details: doc.data().details as string,
+        actor: doc.data().actor as string,
+        timestamp: doc.data().timestamp,
+        id: doc.id,
+      }));
 
-      // Fetch user names for new actors
-      const names: {[key: string]: string} = { ...userNames };
+      setLastVisible(docs[docs.length - 1] || null);
+      setLogs(prev => loadMore ? [...prev, ...logsData] : logsData);
+
+      // Fetch usernames for new logs
+      const actors = new Set(logsData.map(log => log.actor));
+      const names = { ...userNames };
       for (const actor of actors) {
-        if (!userNames[actor]) {
+        if (!names[actor]) {
           names[actor] = await getUserDisplayName(actor);
         }
       }
@@ -65,94 +79,85 @@ export const ActivityLogs = ({ projectId }: { projectId: string }) => {
       console.error("Error fetching logs:", error);
     }
     setIsLoading(false);
-  }, [projectId, userNames, lastDoc]);
+  }, [projectId, selectedType, lastVisible]);
 
-  // Reset pagination when type changes
   useEffect(() => {
-    setLastDoc(null);
-    fetchLogs(true);
-  }, [selectedType, projectId, fetchLogs]);
-
-  const handleNextPage = () => {
-    if (hasMore && !isLoading) {
+    if (projectId) {
+      setLogs([]); // Clear logs when filter changes
+      setLastVisible(null);
+      setHasMore(true);
       fetchLogs();
     }
+  }, [projectId, selectedType]);
+
+  const handleLoadMore = () => {
+    fetchLogs(true);
   };
 
-  const filteredLogs = logs.filter(
-    log => selectedType === 'all' || log.type === selectedType
-  );
-
-  const types: { type: LogType | 'all'; label: string }[] = [
-    { type: 'all', label: 'All Activity' },
-    { type: 'task', label: 'Tasks' },
-    { type: 'member', label: 'Members' },
-    { type: 'project', label: 'Project' },
-    { type: 'assignment', label: 'Assignments' },
-  ];
+  if (isLoading && logs.length === 0) {
+    return <div className="text-center py-8 text-neutral-400">Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {types.map(({ type, label }) => (
+      {/* Type Filters */}
+      <div className="flex flex-wrap gap-2">
+        {LOG_TYPES.map(type => (
           <button
-            key={type}
-            onClick={() => setSelectedType(type)}
-            className={`px-3 py-1 rounded-full text-sm whitespace-nowrap ${
-              selectedType === type
-                ? 'bg-blue-500 text-white'
-                : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+            key={type.value || 'all'}
+            onClick={() => setSelectedType(type.value)}
+            className={`px-3 py-1 rounded ${
+              selectedType === type.value
+                ? 'bg-blue-600 text-white'
+                : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
             }`}
           >
-            {label}
+            {type.label}
           </button>
         ))}
       </div>
 
-      <div className="space-y-2">
-        {filteredLogs.map((log, index) => (
-          <div
-            key={index}
-            className="flex items-start gap-3 p-3 rounded bg-neutral-800/50 border border-neutral-700"
-          >
-            <span className="text-xl">{getLogIcon(log.type)}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-neutral-300">
-                <span className="font-medium text-blue-400">
-                  {userNames[log.actor] || log.actor}
-                </span>{' '}
-                {log.action}
-              </p>
-              <p className="text-xs text-neutral-400 mt-1">{log.details}</p>
+      {logs.length === 0 ? (
+        <div className="text-center py-8 text-neutral-400">No logs to display</div>
+      ) : (
+        <>
+          <div className="space-y-2">
+            {logs.map((log, index) => (
+              <div
+                key={index}
+                className="flex items-start gap-3 p-3 rounded bg-neutral-800/50 border border-neutral-700"
+              >
+                <span className="text-xl">{getLogIcon(log.type)}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-neutral-300">
+                    <span className="font-medium text-blue-400">
+                      {userNames[log.actor] || log.actor}
+                    </span>{' '}
+                    {log.action}
+                  </p>
+                  <p className="text-xs text-neutral-400 mt-1">{log.details}</p>
+                </div>
+                <span className="text-xs text-neutral-500 whitespace-nowrap">
+                  {formatLogDate(log.timestamp)}
+                </span>
+              </div>
+            ))}
+          </div>
+          
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={handleLoadMore}
+                disabled={isLoading}
+                className="px-4 py-2 rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 disabled:opacity-50"
+              >
+                {isLoading ? 'Loading...' : 'Load More'}
+              </button>
             </div>
-            <span className="text-xs text-neutral-500 whitespace-nowrap">
-              {formatLogDate(log.timestamp)}
-            </span>
-          </div>
-        ))}
-
-        {filteredLogs.length === 0 && !isLoading && (
-          <div className="text-center py-8 text-neutral-400">
-            No activity logs to display
-          </div>
-        )}
-
-        {isLoading && (
-          <div className="text-center py-4 text-neutral-400">
-            Loading...
-          </div>
-        )}
-
-        {hasMore && !isLoading && filteredLogs.length > 0 && (
-          <button
-            onClick={handleNextPage}
-            className="w-full p-2 mt-4 border border-neutral-700 rounded bg-neutral-800 text-neutral-400 hover:bg-neutral-700 hover:text-neutral-200 flex items-center justify-center gap-2"
-          >
-            <span>Load More</span>
-            <FaChevronRight className="w-3 h-3" />
-          </button>
-        )}
-      </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

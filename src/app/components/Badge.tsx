@@ -8,12 +8,18 @@ const PRIORITY_COLORS = {
   high: "bg-red-500/20 text-red-500 border-red-500/20",
 };
 
+const PRIORITY_LABELS = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
+
 export const Badge = ({ priority }: BadgeProps) => {
   return (
     <span
       className={`text-xs px-2 py-1 rounded-full border ${PRIORITY_COLORS[priority]}`}
     >
-      {priority}
+      {PRIORITY_LABELS[priority]}
     </span>
   );
 };

@@ -33,7 +33,7 @@ export const getLogIcon = (type: LogType) => {
     case 'task':
       return '📝';
     case 'member':
-      return '👤';
+      return '👥';
     case 'project':
       return '📊';
     case 'assignment':
@@ -48,16 +48,27 @@ export const formatLogDate = (timestamp: Timestamp) => {
   
   const date = timestamp.toDate();
   const now = new Date();
-  const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+  const diffInMilliseconds = now.getTime() - date.getTime();
+  const diffInMinutes = diffInMilliseconds / (1000 * 60);
+  const diffInHours = diffInMinutes / 60;
+  const diffInDays = diffInHours / 24;
 
-  if (diffInHours < 24) {
+  if (diffInMinutes < 2) {
+    return 'just now';
+  } else if (diffInMinutes < 60) {
+    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
+      -Math.floor(diffInMinutes),
+      'minute'
+    );
+  } else if (diffInHours < 24) {  // Changed from 48 to 24
     return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
       -Math.floor(diffInHours),
       'hour'
     );
-  } else if (diffInHours < 48) {
-    return 'yesterday';
   } else {
-    return date.toLocaleDateString();
+    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
+      -Math.floor(diffInDays),
+      'day'
+    );
   }
 };
