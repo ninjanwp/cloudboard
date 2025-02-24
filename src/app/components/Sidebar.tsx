@@ -11,7 +11,6 @@ import { IconSelector } from "./IconSelector";
 import * as FaIcons from "react-icons/fa6";
 import { useRouter } from "next/navigation";
 import { useProject } from "../context/ProjectContext";
-import { FaProjectDiagram } from "react-icons/fa";
 
 type ProjectType = {
   id: string;

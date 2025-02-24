@@ -91,7 +91,7 @@ export const ActivityLogs = ({ projectId }: { projectId: string }) => {
       setHasMore(true);
       fetchLogs();
     }
-  }, [projectId, selectedType]); // Remove fetchLogs from dependencies
+  }, [projectId, selectedType, fetchLogs]);
 
   const handleLoadMore = () => {
     fetchLogs(true);
