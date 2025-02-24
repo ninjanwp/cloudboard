@@ -12,7 +12,7 @@ export const ProjectNav = () => {
 
   return (
     <div className="flex-1 flex justify-center">
-      <nav className="flex items-center h-full gap-1 px-1 max-w-full overflow-x-auto no-scrollbar">
+      <nav className="flex items-center h-full gap-1 px-1 max-w-full overflow-x-auto no-scrollbar bg-neutral-800 border border-neutral-700 rounded-full p-1">
         <Link
           href={`/projects/${selectedProjectId}`}
           className={`px-4 py-2 text-sm font-medium rounded-full ${

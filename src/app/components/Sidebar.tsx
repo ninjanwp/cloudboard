@@ -3,23 +3,15 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-} from "firebase/firestore";
+import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../../../firebase";
-import {
-  FiPlus,
-  FiChevronLeft,
-  FiChevronRight,
-} from "react-icons/fi";
+import { FiPlus, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { Modal } from "./Modal";
 import { IconSelector } from "./IconSelector";
 import * as FaIcons from "react-icons/fa6";
 import { useRouter } from "next/navigation";
 import { useProject } from "../context/ProjectContext";
+import { FaProjectDiagram } from "react-icons/fa";
 
 type ProjectType = {
   id: string;
@@ -40,10 +32,7 @@ export const Sidebar = ({
   onCollapsedChange: (collapsed: boolean) => void;
   defaultCollapsed?: boolean;
 }) => {
-  const {
-    user,
-    createProject,
-  } = useAuth();
+  const { user, createProject } = useAuth();
   const { selectedProjectId, setSelectedProjectId } = useProject();
   const [projects, setProjects] = useState<ProjectType[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -94,7 +83,6 @@ export const Sidebar = ({
     console.log("Project created successfully"); // Add logging
   };
 
-
   const handleCollapse = () => {
     const newState = !isCollapsed;
     setIsCollapsed(newState);
@@ -112,16 +100,20 @@ export const Sidebar = ({
       initial={{ width: 256 }}
       animate={{ width: isCollapsed ? 64 : 256 }}
       layout
-      transition={{ duration: 0.3, ease: "easeInOut" }}
     >
       {/* Header Section with Create Project and Expand buttons */}
-      <motion.div layout className="p-3 flex items-center justify-between h-[60px] border-b border-neutral-700">
+      <motion.div
+        layout
+        className="p-3 flex items-center justify-between h-[60px] border-b border-neutral-700"
+      >
         <AnimatePresence mode="popLayout">
           {!isCollapsed && (
             <motion.button
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 12 }}
+              layout
+              transition={{ duration: 0.1 }}
               onClick={() => setIsModalOpen(true)}
               className="flex text-nowrap items-center justify-center gap-2 p-2 bg-blue-500 rounded text-white flex-grow mr-2"
             >
@@ -132,11 +124,11 @@ export const Sidebar = ({
             </motion.button>
           )}
         </AnimatePresence>
-        
+
         <motion.button
           layout
           onClick={handleCollapse}
-          className="grid h-10 w-10 place-content-center text-lg hover:bg-neutral-800 rounded text-neutral-400 hover:text-neutral-200"
+          className="grid h-10 w-10 place-content-center text-lg hover:bg-neutral-800 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-neutral-200"
         >
           {isCollapsed ? (
             <FiChevronRight className="transition-transform" />
@@ -152,28 +144,43 @@ export const Sidebar = ({
           <motion.div
             key={project.id}
             layout
-            className="relative"
+            className="relative p-3"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.125 }}
           >
             <motion.div
               layout
-              className={`p-4 flex items-center cursor-pointer transition-colors
-                ${selectedProjectId === project.id 
-                  ? "bg-blue-950 text-blue-100" 
-                  : "text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100"
-              }`}
+              className={`px-1 py-4 rounded flex items-center cursor-pointer border transition-colors
+                ${
+                  selectedProjectId === project.id
+                    ? "bg-blue-950 text-blue-100 border-blue-600"
+                    : "text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100 border-transparent"
+                }`}
               onClick={() => handleProjectSelect(project.id)}
             >
               {/* Project Icon and Name */}
-              <div className="flex items-center gap-3">
-                <motion.div layout="preserve-aspect" className="w-8 h-8 flex items-center justify-center">
-                  {project.icon && (FaIcons as Record<string, React.ComponentType<IconProps>>)[project.icon] ? (
+              <div className="flex items-center gap-3 justify-start">
+                <motion.div
+                  layout="preserve-aspect"
+                  className="w-8 h-8 flex items-center justify-center"
+                >
+                  {project.icon &&
+                  (FaIcons as Record<string, React.ComponentType<IconProps>>)[
+                    project.icon
+                  ] ? (
                     <span className="flex items-center justify-center">
-                      {React.createElement((FaIcons as Record<string, React.ComponentType<IconProps>>)[project.icon], {
-                        className: "w-5 h-5"
-                      })}
+                      {React.createElement(
+                        (
+                          FaIcons as Record<
+                            string,
+                            React.ComponentType<IconProps>
+                          >
+                        )[project.icon],
+                        {
+                          className: "w-5 h-5",
+                        }
+                      )}
                     </span>
                   ) : (
                     <span className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-base font-medium">
@@ -181,11 +188,13 @@ export const Sidebar = ({
                     </span>
                   )}
                 </motion.div>
-                
+
                 {!isCollapsed && (
                   <motion.span
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
                     layout
-                    className="text-xs font-medium"
+                    className="text-md font-medium text-nowrap"
                   >
                     {project.name}
                   </motion.span>
