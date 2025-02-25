@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { Header } from "../components/Header";
 import { ProjectNav } from "../components/ProjectNav";
+import { MobileProjectNav } from "../components/MobileProjectNav";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { FiMenu } from "react-icons/fi";
+import { ContentContainer } from "../components/ContentContainer";
 
 export default function ProjectsLayout({
   children,
@@ -14,8 +16,24 @@ export default function ProjectsLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if on mobile device
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+    
+    checkIfMobile();
+    window.addEventListener("resize", checkIfMobile);
+    return () => window.removeEventListener("resize", checkIfMobile);
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -28,21 +46,46 @@ export default function ProjectsLayout({
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <Header>
-        <div className="w-full max-w-md">
-          <ProjectNav />
-        </div>
-      </Header>
-      <div className="flex flex-1 pt-16 overflow-hidden">
-        <Sidebar onCollapsedChange={setIsSidebarCollapsed} />
-        <main
-          className={`flex-1 transition-all duration-300 overflow-y-auto overflow-x-auto ${
-            isSidebarCollapsed ? "ml-16" : "ml-64"
-          }`}
+    <div className="fixed inset-0 flex flex-col overflow-hidden">
+      <div className="flex-shrink-0">        
+        <Header>
+          {/* Only show ProjectNav in header on desktop */}
+          {!isMobile && (
+            <div className="w-full max-w-md">
+              <ProjectNav />
+            </div>
+          )}
+        </Header>
+      </div>
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar 
+          onCollapsedChange={setIsSidebarCollapsed} 
+          isMobile={isMobile}
+          isOpen={isMobileSidebarOpen}
+          onClose={() => setIsMobileSidebarOpen(false)}
+          defaultCollapsed={isSidebarCollapsed}
+        />
+        <ContentContainer
+          className={`flex-1 mt-16 transition-all ${
+            isMobile ? "" : (isSidebarCollapsed ? "ml-16" : "ml-64")
+          } h-[calc(100vh-4rem)] ${isMobile ? "pb-14" : ""}`}
         >
           {children}
-        </main>
+        </ContentContainer>
+        
+        {/* Repositioned Mobile hamburger menu button */}
+        {isMobile && (
+          <button
+            onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+            className="fixed right-4 bottom-20 z-50 bg-[var(--accent)] text-white p-3 rounded-full shadow-lg"
+            aria-label="Toggle sidebar menu"
+          >
+            <FiMenu size={24} />
+          </button>
+        )}
+
+        {/* Bottom navigation for mobile */}
+        <MobileProjectNav />
       </div>
     </div>
   );

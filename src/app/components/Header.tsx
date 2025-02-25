@@ -6,13 +6,13 @@ import { FaBell, FaUser, FaChevronDown } from "react-icons/fa6";
 import { SignInModal } from "./SignInModal";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 
 export const Header = ({ 
   children,
-  extraPadding = false 
+  extraPadding = false
 }: { 
   children?: React.ReactNode;
   extraPadding?: boolean;
@@ -21,7 +21,24 @@ export const Header = ({
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
   const [userDisplayName, setUserDisplayName] = useState<string>("");
+  
+  // Only hide logo on specific pages
+  const hideLogo = pathname === '/login' || pathname === '/register';
+  
+  // Detect if on mobile viewport
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -40,30 +57,38 @@ export const Header = ({
   }, [user]);
 
   return (
-    <header className="fixed w-screen top-0 left-0 z-[100] border-b border-white/10 bg-[var(--surface)]">
-      <div className={`flex justify-between items-center h-16 px-3 md:px-4 ${extraPadding ? 'lg:px-12' : ''}`}>
-        <Link href="/" className="shrink-0">
-          <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
-            cloudboard
-          </h1>
-        </Link>
+    <header className="fixed w-screen top-0 left-0 z-[100] bg-[var(--surface)]">
+      <div className={`flex justify-between items-center h-16 px-2 md:px-4 ${extraPadding ? 'lg:px-12' : ''}`}>
+        {/* Left section: Logo */}
+        <div className="flex items-center">
+          {/* Show logo except on login/register pages */}
+          {!hideLogo && (
+            <Link href={user ? "/projects" : "/"} className="shrink-0">
+              <h1 className="text-lg md:text-xl lg:text-2xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
+                cloudboard
+              </h1>
+            </Link>
+          )}
+        </div>
 
-        <div className="flex-1 flex justify-center mx-2 overflow-hidden">
-          <div className="w-full max-w-fit">
+        {/* Middle section: Project navigation */}
+        <div className={`flex-1 overflow-hidden ${isMobile ? 'px-2' : 'ml-4'}`}>
+          <div className="w-full max-w-fit mx-auto">
             {children}
           </div>
         </div>
 
+        {/* Right section: Notifications and user menu */}
         {user ? (
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-1 md:gap-4">
             {/* Notifications */}
             <button
               onClick={() => router.push('/notifications')}
-              className="relative p-1.5 md:p-2 text-[var(--text-secondary)] hover:text-[var(--text)]"
+              className="relative p-1 md:p-1.5 text-[var(--text-secondary)] hover:text-[var(--text)]"
             >
               <FaBell className="w-4 h-4 md:w-5 md:h-5" />
               {invitations.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-3 h-3 md:w-4 md:h-4 flex items-center justify-center">
                   {invitations.length}
                 </span>
               )}
@@ -73,11 +98,21 @@ export const Header = ({
             <div className="relative">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-1 md:gap-2 p-1.5 md:p-2 text-[var(--text-secondary)] hover:text-[var(--text)]"
+                className="flex items-center gap-1 md:gap-2 p-1 md:p-1.5 text-[var(--text-secondary)] hover:text-[var(--text)]"
               >
-                <FaUser className="w-4 h-4 md:w-5 md:h-5" />
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt="User avatar"
+                    className="w-6 h-6 md:w-7 md:h-7 rounded-full"
+                  />
+                ) : (
+                  <FaUser className="w-4 h-4 md:w-5 md:h-5" />
+                )}
                 <span className="text-sm hidden lg:inline">{userDisplayName}</span>
-                <FaChevronDown className={`w-3 h-3 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                {!isMobile && (
+                  <FaChevronDown className={`w-3 h-3 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                )}
               </button>
 
               <AnimatePresence>
