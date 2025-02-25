@@ -10,9 +10,6 @@ import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 
-import { useTheme } from "../context/ThemeContext";
-import { ThemeName, themes } from "../types/theme";
-
 export const Header = ({ 
   children,
   extraPadding = false 

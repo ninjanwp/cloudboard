@@ -126,7 +126,7 @@ export const ActivityLogs = ({ projectId }: { projectId: string }) => {
     } finally {
       isCurrentlyFetching.current = false;
     }
-  }, [projectId, selectedType, lastVisible, ITEMS_PER_PAGE, logs.length]);
+  }, [projectId, selectedType, lastVisible, ITEMS_PER_PAGE, logs.length, fetchUserNames]);
 
   // Fetch user names for all actors
   const fetchUserNames = useCallback(async (actors: string[]) => {

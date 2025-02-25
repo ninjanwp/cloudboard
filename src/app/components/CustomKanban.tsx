@@ -217,16 +217,9 @@ type ColumnProps = {
   boardId: string; // Add this
 };
 
-const colorMap: { [key: string]: string } = {
-  "blue-400": "bg-blue-400 text-blue-400",
-  "red-400": "bg-red-400 text-red-400",
-  "yellow-300": "bg-yellow-300 text-yellow-300",
-  "green-400": "bg-green-400 text-green-400",
-};
-
 const Column = ({
   title,
-  headingColor,
+  headingColor, // We'll keep this parameter in case it's used in props, but we won't reference it
   cards,
   column,
   setCards,
