@@ -37,7 +37,7 @@ export default function ProjectsLayout({
       <div className="flex flex-1 pt-16">
         <Sidebar onCollapsedChange={setIsSidebarCollapsed} />
         <main
-          className={`flex-1 transition-all duration-300 overflow-y-auto h-[calc(100vh-4rem)] ${
+          className={`flex-1 transition-all duration-300 overflow-hidden h-[calc(100vh-16)] ${
             isSidebarCollapsed ? "ml-16" : "ml-64"
           }`}
         >

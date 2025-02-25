@@ -103,16 +103,13 @@ export const Sidebar = ({
       {/* Header Section with Create Project and Expand buttons */}
       <motion.div
         layout
-        className="p-3 flex items-center justify-between h-[60px] border-b border-neutral-700"
+        className="p-3 flex items-center justify-between h-[60px] border-b border-neutral-800"
       >
         <AnimatePresence mode="popLayout">
           {!isCollapsed && (
             <motion.button
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 12 }}
               layout
-              transition={{ duration: 0.1 }}
+              
               onClick={() => setIsModalOpen(true)}
               className="flex text-nowrap items-center justify-center gap-2 p-2 bg-blue-500 rounded text-white flex-grow mr-2"
             >
@@ -125,9 +122,9 @@ export const Sidebar = ({
         </AnimatePresence>
 
         <motion.button
-          layout
+          layout="preserve-aspect"
           onClick={handleCollapse}
-          className="grid h-10 w-10 place-content-center text-lg hover:bg-neutral-800 bg-neutral-800 border border-neutral-700 rounded text-neutral-400 hover:text-neutral-200"
+          className="grid h-10 w-10 place-content-center text-lg border-transparent hover:bg-neutral-800 border hover:border-neutral-600 rounded transition-colors text-neutral-400 hover:text-neutral-200"
         >
           {isCollapsed ? (
             <FiChevronRight className="transition-transform" />
@@ -143,18 +140,18 @@ export const Sidebar = ({
           <motion.div
             key={project.id}
             layout
-            className="relative p-3"
+            className="relative"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.125 }}
           >
             <motion.div
               layout
-              className={`px-1 py-4 rounded flex items-center cursor-pointer border transition-colors
+              className={`p-3 flex items-center cursor-pointer border-l-4 transition-colors
                 ${
                   selectedProjectId === project.id
-                    ? "bg-blue-950 text-blue-100 border-blue-600"
-                    : "text-neutral-400 hover:bg-neutral-800 hover:text-neutral-100 border-transparent"
+                    ? "text-neutral-100 border-blue-600"
+                    : "text-neutral-400 hover:text-neutral-100 border-transparent"
                 }`}
               onClick={() => handleProjectSelect(project.id)}
             >
