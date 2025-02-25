@@ -5,12 +5,15 @@ import { Header } from "../components/Header";
 import { useState, useEffect } from "react";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
-import { FaChevronLeft } from "react-icons/fa6"; // Add this import
-import { useRouter } from "next/navigation"; // Add this import
+import { FaChevronLeft } from "react-icons/fa6";
+import { useRouter } from "next/navigation";
+import { useTheme } from "../context/ThemeContext";
+import { ThemeName, themes } from "../types/theme";
 
 export default function Settings() {
-  const router = useRouter(); // Add this
+  const router = useRouter();
   const { user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -59,40 +62,40 @@ export default function Settings() {
           <div className="flex items-center gap-4 mb-6">
             <button
               onClick={() => router.back()}
-              className="p-2 hover:bg-neutral-800 rounded-lg transition-colors"
+              className="p-2 hover:bg-[var(--surface-hover)] rounded-lg transition-colors"
             >
-              <FaChevronLeft className="text-neutral-400" />
+              <FaChevronLeft className="text-[var(--text-secondary)]" />
             </button>
-            <h1 className="text-2xl font-bold text-white">Settings</h1>
+            <h1 className="text-2xl font-bold text-adaptive">Settings</h1>
           </div>
           
           <div className="space-y-6">
             {/* Profile Section */}
-            <div className="bg-neutral-800 rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Profile Information</h2>
+            <div className="bg-[var(--surface)] rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-adaptive mb-4">Profile Information</h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm text-neutral-400 mb-1">First Name</label>
+                    <label className="block text-sm text-adaptive-secondary mb-1">First Name</label>
                     <input
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+                      className="input-themed"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm text-neutral-400 mb-1">Last Name</label>
+                    <label className="block text-sm text-adaptive-secondary mb-1">Last Name</label>
                     <input
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+                      className="input-themed"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm text-neutral-400 mb-1">Email</label>
+                  <label className="block text-sm text-adaptive-secondary mb-1">Email</label>
                   <input
                     type="email"
                     value={user?.email || ""}
@@ -115,6 +118,40 @@ export default function Settings() {
                   </button>
                 </div>
               </form>
+            </div>
+
+            {/* Theme Section */}
+            <div className="bg-[var(--surface)] rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-adaptive mb-4">Theme Settings</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {(Object.keys(themes) as ThemeName[]).map((themeName) => (
+                  <button
+                    key={themeName}
+                    onClick={() => setTheme(themeName)}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      theme === themeName
+                        ? 'border-[var(--accent)]'
+                        : 'border-transparent hover:border-[var(--border)]'
+                    }`}
+                    style={{
+                      backgroundColor: themes[themeName].background,
+                    }}
+                  >
+                    <div
+                      className="w-full h-8 rounded mb-2"
+                      style={{
+                        backgroundColor: themes[themeName].surface,
+                      }}
+                    />
+                    <p style={{ 
+                      color: themes[themeName].text,
+                      fontWeight: theme === themeName ? 'bold' : 'normal'
+                    }}>
+                      {themeName.charAt(0).toUpperCase() + themeName.slice(1)}
+                    </p>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

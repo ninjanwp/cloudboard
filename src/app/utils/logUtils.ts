@@ -9,6 +9,8 @@ export interface LogEntry {
   details: string;
   actor: string;
   timestamp: Timestamp;
+  id?: string;  // Optional since it might not be set immediately
+  uniqueId?: string; // Added for React key uniqueness
 }
 
 export const createLog = async (
@@ -43,32 +45,38 @@ export const getLogIcon = (type: LogType) => {
   }
 };
 
-export const formatLogDate = (timestamp: Timestamp) => {
-  if (!timestamp) return '';
+// Update the timestamp handling to handle null/undefined cases
+export const formatLogDate = (timestamp: Timestamp | null | undefined) => {
+  if (!timestamp) return 'unknown date';
   
-  const date = timestamp.toDate();
-  const now = new Date();
-  const diffInMilliseconds = now.getTime() - date.getTime();
-  const diffInMinutes = diffInMilliseconds / (1000 * 60);
-  const diffInHours = diffInMinutes / 60;
-  const diffInDays = diffInHours / 24;
+  try {
+    const date = timestamp.toDate();
+    const now = new Date();
+    const diffInMilliseconds = now.getTime() - date.getTime();
+    const diffInMinutes = diffInMilliseconds / (1000 * 60);
+    const diffInHours = diffInMinutes / 60;
+    const diffInDays = diffInHours / 24;
 
-  if (diffInMinutes < 2) {
-    return 'just now';
-  } else if (diffInMinutes < 60) {
-    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-      -Math.floor(diffInMinutes),
-      'minute'
-    );
-  } else if (diffInHours < 24) {  // Changed from 48 to 24
-    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-      -Math.floor(diffInHours),
-      'hour'
-    );
-  } else {
-    return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
-      -Math.floor(diffInDays),
-      'day'
-    );
+    if (diffInMinutes < 2) {
+      return 'just now';
+    } else if (diffInMinutes < 60) {
+      return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
+        -Math.floor(diffInMinutes),
+        'minute'
+      );
+    } else if (diffInHours < 24) {
+      return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
+        -Math.floor(diffInHours),
+        'hour'
+      );
+    } else {
+      return new Intl.RelativeTimeFormat('en', { numeric: 'auto' }).format(
+        -Math.floor(diffInDays),
+        'day'
+      );
+    }
+  } catch (error) {
+    console.error("Error formatting timestamp:", error);
+    return 'invalid date';
   }
 };

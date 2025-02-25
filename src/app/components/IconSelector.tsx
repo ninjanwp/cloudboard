@@ -22,13 +22,13 @@ export const IconSelector = ({
   );
 
   return (
-    <div className="bg-neutral-900 p-1 rounded border border-neutral-700">
+    <div className="bg-[var(--surface)] p-1 rounded border border-[var(--border)]">
       <input
         type="text"
         placeholder="Search icons..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="w-full mb-2 p-2 rounded bg-neutral-800 border border-neutral-700 text-neutral-200 focus:outline-none focus:border-blue-500"
+        className="w-full mb-2 p-2 rounded bg-[var(--background)] border border-[var(--border)] text-[var(--text)] focus:outline-none focus:border-[var(--accent)]"
       />
       <div className="overflow-x-auto">
         <div className="grid grid-rows-5 auto-rows-[32px] grid-flow-col auto-cols-[32px] gap-0.5 pb-4">
@@ -41,8 +41,8 @@ export const IconSelector = ({
                 onClick={() => setSelectedIcon(option.name)}
                 className={`flex p-2 items-center justify-center rounded border transition-colors ${
                   selectedIcon === option.name
-                    ? "border-blue-500 bg-blue-500/20"
-                    : "border-neutral-700"
+                    ? "border-[var(--accent)] bg-[var(--accent)]/20 text-[var(--accent)]"
+                    : "border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text)] hover:border-[var(--border-hover)]"
                 }`}
               >
                 <IconComponent/>

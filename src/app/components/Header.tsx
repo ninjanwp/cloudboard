@@ -10,6 +10,9 @@ import { useRouter } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 
+import { useTheme } from "../context/ThemeContext";
+import { ThemeName, themes } from "../types/theme";
+
 export const Header = ({ 
   children,
   extraPadding = false 
@@ -40,7 +43,7 @@ export const Header = ({
   }, [user]);
 
   return (
-    <header className="fixed w-screen top-0 left-0 z-[100] border-b border-white/10 bg-neutral-950">
+    <header className="fixed w-screen top-0 left-0 z-[100] border-b border-white/10 bg-[var(--surface)]">
       <div className={`flex justify-between items-center h-16 px-3 md:px-4 ${extraPadding ? 'lg:px-12' : ''}`}>
         <Link href="/" className="shrink-0">
           <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent">
@@ -59,7 +62,7 @@ export const Header = ({
             {/* Notifications */}
             <button
               onClick={() => router.push('/notifications')}
-              className="relative p-1.5 md:p-2 text-neutral-400 hover:text-neutral-200"
+              className="relative p-1.5 md:p-2 text-[var(--text-secondary)] hover:text-[var(--text)]"
             >
               <FaBell className="w-4 h-4 md:w-5 md:h-5" />
               {invitations.length > 0 && (
@@ -73,7 +76,7 @@ export const Header = ({
             <div className="relative">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-1 md:gap-2 p-1.5 md:p-2 text-neutral-400 hover:text-neutral-200"
+                className="flex items-center gap-1 md:gap-2 p-1.5 md:p-2 text-[var(--text-secondary)] hover:text-[var(--text)]"
               >
                 <FaUser className="w-4 h-4 md:w-5 md:h-5" />
                 <span className="text-sm hidden lg:inline">{userDisplayName}</span>
@@ -86,10 +89,10 @@ export const Header = ({
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute right-0 mt-2 w-48 bg-neutral-800 rounded-lg shadow-lg overflow-hidden z-50"
+                    className="absolute right-0 mt-2 w-48 bg-[var(--surface)] rounded-lg shadow-lg overflow-hidden z-50"
                   >
                     <Link href="/settings">
-                      <div className="px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-700 cursor-pointer">
+                      <div className="px-4 py-2 text-sm text-[var(--text)] hover:bg-[var(--background)] cursor-pointer">
                         Settings
                       </div>
                     </Link>
@@ -98,7 +101,7 @@ export const Header = ({
                         setIsUserMenuOpen(false);
                         handleSignOut();
                       }}
-                      className="px-4 py-2 text-sm text-red-400 hover:bg-neutral-700 cursor-pointer"
+                      className="px-4 py-2 text-sm text-red-400 hover:bg-[var(--background)] cursor-pointer"
                     >
                       Log Out
                     </div>
@@ -110,7 +113,7 @@ export const Header = ({
         ) : (
           <button
             onClick={() => setIsSignInModalOpen(true)}
-            className="rounded-lg bg-white/10 px-3 py-1.5 md:px-4 md:py-2 text-sm text-white backdrop-blur-sm transition hover:bg-white/20"
+            className="rounded-lg bg-white/10 px-3 py-1.5 md:px-4 md:py-2 text-sm text-[var(--text)] backdrop-blur-sm transition hover:bg-white/20"
           >
             Log In
           </button>

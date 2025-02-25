@@ -35,7 +35,7 @@ export const SizeIndicator = ({ size, style = "boxes", className = "" }: SizeInd
 
   if (style === "text") {
     return (
-      <div className={`text-sm ${className}`}>
+      <div className={`text-sm text-[var(--text)] ${className}`}>
         {sizeToText[size]}
       </div>
     );
@@ -46,9 +46,9 @@ export const SizeIndicator = ({ size, style = "boxes", className = "" }: SizeInd
     const sizeIndex = boxes.indexOf(size);
     
     return (
-      <div className={`w-16 h-3 bg-neutral-800 rounded overflow-hidden ${className}`}>
+      <div className={`w-16 h-3 bg-[var(--surface)] rounded overflow-hidden ${className}`}>
         <div 
-          className="h-full bg-neutral-400 transition-all" 
+          className="h-full bg-[var(--accent)] transition-all" 
           style={{ width: `${((sizeIndex + 1) / 4) * 100}%` }}
         />
       </div>
@@ -66,8 +66,8 @@ export const SizeIndicator = ({ size, style = "boxes", className = "" }: SizeInd
           key={index}
           className={`w-3 h-3 border rounded-sm ${
             index <= sizeIndex
-              ? "bg-blue-400 border-neutral-500"
-              : "bg-neutral-600 border-neutral-500"
+              ? "bg-[var(--accent)] border-[var(--border)]"
+              : "bg-[var(--surface)] border-[var(--border)]"
           }`}
         />
       ))}

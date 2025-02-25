@@ -11,6 +11,8 @@ import { IconSelector } from "./IconSelector";
 import * as FaIcons from "react-icons/fa6";
 import { useRouter } from "next/navigation";
 import { useProject } from "../context/ProjectContext";
+import { useTheme } from "../context/ThemeContext";
+import { ThemeName, themes } from "../types/theme";
 
 type ProjectType = {
   id: string;
@@ -95,7 +97,7 @@ export const Sidebar = ({
 
   return (
     <motion.div
-      className="bg-neutral-950 text-white h-[calc(100vh)] flex flex-col fixed top-16 left-0 z-50 border-r border-white/10"
+      className="text-[var(--text)] h-[calc(100vh)] flex flex-col fixed top-16 left-0 z-50 border-r border-white/10 bg-[var(--surface)]"
       initial={{ width: 256 }}
       animate={{ width: isCollapsed ? 64 : 256 }}
       layout
@@ -103,15 +105,14 @@ export const Sidebar = ({
       {/* Header Section with Create Project and Expand buttons */}
       <motion.div
         layout
-        className="p-3 flex items-center justify-between h-[60px] border-b border-neutral-800"
+        className="p-3 flex items-center justify-between h-[60px] border-b border-[var(--surface)]"
       >
         <AnimatePresence mode="popLayout">
           {!isCollapsed && (
             <motion.button
               layout
-              
               onClick={() => setIsModalOpen(true)}
-              className="flex text-nowrap items-center justify-center gap-2 p-2 bg-blue-500 rounded text-white flex-grow mr-2"
+              className="flex text-nowrap items-center justify-center gap-2 p-2 btn-accent rounded flex-grow mr-2"
             >
               <FiPlus />
               <motion.span layout className="text-xs font-medium">
@@ -150,8 +151,8 @@ export const Sidebar = ({
               className={`p-3 flex items-center cursor-pointer border-l-4 transition-colors
                 ${
                   selectedProjectId === project.id
-                    ? "text-neutral-100 border-blue-600"
-                    : "text-neutral-400 hover:text-neutral-100 border-transparent"
+                    ? "text-[var(--text)] border-[var(--accent)]"
+                    : "text-[var(--text-secondary)] hover:text-[var(--text)] border-transparent"
                 }`}
               onClick={() => handleProjectSelect(project.id)}
             >
@@ -204,16 +205,16 @@ export const Sidebar = ({
       {/* Create Project Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <div className="space-y-4">
-          <h2 className="text-xl font-bold text-neutral-100">Create Project</h2>
+          <h2 className="text-xl font-bold text-[var(--text)]">Create Project</h2>
           <input
             type="text"
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
             placeholder="Project Name"
-            className="w-full p-2 rounded bg-neutral-800 text-neutral-100"
+            className="w-full p-2 rounded bg-[var(--surface)] text-[var(--text)]"
           />
           <div>
-            <label className="block mb-2 text-sm text-neutral-400">
+            <label className="block mb-2 text-sm text-[var(--text-secondary)]">
               Project Icon
             </label>
             <IconSelector
@@ -223,7 +224,7 @@ export const Sidebar = ({
           </div>
           <button
             onClick={handleCreateProject}
-            className="w-full p-2 bg-blue-500 rounded text-white"
+            className="w-full p-2 btn-accent rounded"
           >
             Create
           </button>

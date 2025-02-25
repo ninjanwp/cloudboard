@@ -162,18 +162,18 @@ export default function ProjectManagePage() {
               }
             }}
           >
-            <div className="w-12 h-12 flex items-center justify-center bg-neutral-800 rounded-lg">
-              <IconComponent className="w-6 h-6 text-neutral-100" />
+            <div className="w-12 h-12 flex items-center justify-center bg-[var(--surface)] rounded-lg border border-[var(--border)]">
+              <IconComponent className="w-6 h-6 text-[var(--text)]" />
             </div>
-            <h1 className="text-3xl font-bold text-white">{currentProject.name}</h1>
+            <h1 className="text-3xl font-bold text-[var(--text)]">{currentProject.name}</h1>
             {isOwner && (
-              <button className="opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-neutral-800 rounded-full">
-                <FaPen className="w-4 h-4 text-neutral-400" />
+              <button className="opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-[var(--surface)] rounded-full">
+                <FaPen className="w-4 h-4 text-[var(--text-secondary)]" />
               </button>
             )}
           </div>
         </div>
-        <p className="text-neutral-400">Project Management</p>
+        <p className="text-[var(--text-secondary)]">Project Management</p>
       </div>
 
       {isOwner && (
@@ -184,11 +184,11 @@ export default function ProjectManagePage() {
               value={newMemberEmail}
               onChange={(e) => setNewMemberEmail(e.target.value)}
               placeholder="Enter email to invite"
-              className="flex-1 rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+              className="flex-1 rounded border border-[var(--border)] bg-[var(--surface)] p-2 text-[var(--text)]"
             />
             <button
               type="submit"
-              className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 flex items-center gap-2"
+              className="rounded bg-[var(--accent)] px-4 py-2 text-white hover:bg-[var(--accent-hover)] flex items-center gap-2"
             >
               <FaUserPlus />
               <span>Invite</span>
@@ -199,20 +199,20 @@ export default function ProjectManagePage() {
       )}
 
     <div className="space-y-4">
-      <h2 className="text-xl font-bold text-white mb-4">Project Members</h2>
+      <h2 className="text-xl font-bold text-[var(--text)] mb-4">Project Members</h2>
       {members.map((member) => (
         <div
         key={member}
-        className="flex items-center justify-between p-4 rounded bg-neutral-800 border border-neutral-700 h-[60px]"
+        className="flex items-center justify-between p-4 rounded bg-[var(--surface)] border border-[var(--border)] h-[60px]"
         >
         <div className="flex items-center gap-2">
           <span 
-            className="text-neutral-100"
+            className="text-[var(--text)]"
             title={memberDisplayNames[member] ? `${memberDisplayNames[member]} (${member})` : member}
           >
             {memberDisplayNames[member] || member}
             {member === user?.email && (
-              <span className="ml-1.5 text-neutral-400 text-sm">(you)</span>
+              <span className="ml-1.5 text-[var(--text-secondary)] text-sm">(you)</span>
             )}
           </span>
           {member === members[0] && ( // First member in the array is always the owner
@@ -232,7 +232,7 @@ export default function ProjectManagePage() {
     </div>
 
     <div className="mt-16">
-      <h2 className="text-xl font-bold text-white mb-6">Project Activity</h2>
+      <h2 className="text-xl font-bold text-[var(--text)] mb-6">Project Activity</h2>
       <ActivityLogs projectId={projectId} />
     </div>
 
@@ -279,16 +279,16 @@ export default function ProjectManagePage() {
 
     <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)}>
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-white">Edit Project</h2>
+        <h2 className="text-2xl font-bold text-[var(--text)]">Edit Project</h2>
         
         <div>
-          <label className="block text-sm text-neutral-400 mb-2">Project Name</label>
+          <label className="block text-sm text-[var(--text-secondary)] mb-2">Project Name</label>
           <input
             type="text"
             value={editName}
             onChange={(e) => setEditName(e.target.value)}
-            className={`w-full rounded border bg-neutral-900 p-2 text-neutral-100 ${
-              error ? 'border-red-500' : 'border-neutral-700 focus:border-blue-500'
+            className={`w-full rounded border bg-neutral-900 p-2 text-[var(--text)] ${
+              error ? 'border-red-500' : 'border-[var(--border)] focus:border-blue-500'
             }`}
             placeholder="Enter project name"
           />
@@ -296,7 +296,7 @@ export default function ProjectManagePage() {
         </div>
 
         <div>
-          <label className="block text-sm text-neutral-400 mb-2">Project Icon</label>
+          <label className="block text-sm text-[var(--text-secondary)] mb-2">Project Icon</label>
           <IconSelector
             selectedIcon={editIcon}
             setSelectedIcon={setEditIcon}
@@ -306,13 +306,13 @@ export default function ProjectManagePage() {
         <div className="flex justify-end gap-2 pt-4">
           <button
             onClick={() => setShowEditModal(false)}
-            className="px-4 py-2 text-neutral-400 hover:text-neutral-200"
+            className="px-4 py-2 text-[var(--text-secondary)] hover:text-[var(--text)]"
           >
             Cancel
           </button>
           <button
             onClick={() => handleUpdateProject({ name: editName, icon: editIcon })}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-4 py-2 bg-[var(--accent)] text-white rounded hover:bg-[var(--accent-hover)]"
           >
             Save Changes
           </button>

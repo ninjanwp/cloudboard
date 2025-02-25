@@ -151,7 +151,7 @@ const Board = ({
   return (
     <div className="relative w-full h-full">
       <GridBackground />
-      <div className="h-full w-full overflow-x-auto overflow-y-hidden bg-neutral-950/80 pb-24">
+      <div className="h-full w-full overflow-x-auto overflow-y-hidden pb-24">
         <div className="flex min-w-max p-6">
           <Column
             title="Backlog"
@@ -392,21 +392,11 @@ const Column = ({
 
   return (
     <div className="flex-grow w-56 shrink-0 px-2">
-      <div
-        className={classNames(
-          "mb-1 flex items-center justify-start gap-2 rounded",
-          colorMap[headingColor].split(" ")[0] + " bg-opacity-10"
-        )}
-      >
-        <span
-          className={classNames(
-            "rounded-l bg-neutral-800/80 font-mono px-3 py-2",
-            colorMap[headingColor].split(" ")[1]
-          )}
-        >
+      <div className="mb-1 flex items-center justify-start gap-2 rounded bg-[var(--surface)] bg-opacity-50">
+        <span className="rounded-l bg-[var(--surface)] font-mono px-3 py-2 text-[var(--accent)]">
           {filteredCards.length}
         </span>
-        <h3 className="font-bold">{title}</h3>
+        <h3 className="font-bold text-[var(--text)]">{title}</h3>
       </div>
       <div
         onDrop={handleDragEnd}
@@ -414,7 +404,9 @@ const Column = ({
         onDragLeave={handleDragLeave}
         className={classNames(
           "h-full w-full transition-colors rounded border",
-          active ? "bg-blue-300/5 border-blue-400/50" : "border-transparent" // Changed from border-neutral-800/0
+          active
+            ? "bg-[var(--border)] border-[var(--accent)]"
+            : "border-transparent"
         )}
       >
         <DropIndicator
@@ -591,7 +583,7 @@ const Card = ({ ...props }: CardProps) => {
             size: props.size,
           })
         }
-        className="cursor-grab rounded border border-neutral-700 bg-neutral-800 p-3 hover:border-neutral-600 active:cursor-grabbing select-none"
+        className="cursor-grab rounded border border-[var(--surface)] bg-[var(--surface)] p-3 hover:border-[var(--text-secondary)] active:cursor-grabbing select-none"
       >
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-2 items-start justify-between">
@@ -601,7 +593,7 @@ const Card = ({ ...props }: CardProps) => {
                   props.priority
                 )}`}
               />
-              <p className="text-xl font-bold text-neutral-100 break-words">
+              <p className="text-xl font-bold text-[var(--text)] break-words">
                 {props.title}
               </p>
             </div>
@@ -616,7 +608,7 @@ const Card = ({ ...props }: CardProps) => {
           </div>
 
           {props.description && (
-            <p className="mt-2 line-clamp-5 text-xs text-neutral-400 whitespace-pre-wrap break-words">
+            <p className="mt-2 line-clamp-5 text-xs text-[var(--text-secondary)] whitespace-pre-wrap break-words">
               {props.description}
             </p>
           )}
@@ -630,7 +622,7 @@ const Card = ({ ...props }: CardProps) => {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300"
+                  className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:text-[var(--accent-hover)]"
                 >
                   <FaIcons.FaLink className="text-[10px]" />
                   <span className="truncate">{link.title || link.url}</span>
@@ -640,11 +632,11 @@ const Card = ({ ...props }: CardProps) => {
           )}
 
           <div className="mt-2 flex items-center justify-between text-xs">
-            <div className="text-neutral-400">
+            <div className="text-[var(--text-secondary)]">
               {props.assignment?.assignedTo && (
                 <span className="font-bold">
                   Assigned to:{" "}
-                  <span className="text-blue-400">
+                  <span className="text-[var(--accent)]">
                     {userDisplayNames[props.assignment.assignedTo] ||
                       props.assignment.assignedTo}
                   </span>
@@ -653,7 +645,7 @@ const Card = ({ ...props }: CardProps) => {
             </div>
           </div>
 
-          <div className="mt-2 text-xs w-full flex justify-between text-neutral-500">
+          <div className="mt-2 text-xs w-full flex justify-between text-[var(--text-secondary)]">
             <p>
               Posted: <br /> {new Date(props.createdAt).toLocaleDateString()}
             </p>
@@ -734,17 +726,15 @@ const CardOverview = ({
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <IconComponent
-            className={`text-4xl flex-shrink-0 ${getPriorityColor(
-              card.priority
-            )}`}
+            className={`text-4xl flex-shrink-0 ${getPriorityColor(card.priority)}`}
           />
-          <h2 className="text-4xl font-bold text-neutral-100 break-words">
+          <h2 className="text-4xl font-bold text-[var(--text)] break-words">
             {card.title}
           </h2>
         </div>
         <button
           onClick={onEdit}
-          className="w-full p-2 rounded border border-neutral-700 bg-neutral-800 text-neutral-400 hover:text-neutral-100 hover:border-neutral-600 hover:bg-neutral-700"
+          className="w-full p-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors"
         >
           <span className="flex items-center justify-center gap-1.5">
             <FaIcons.FaPen />
@@ -755,17 +745,17 @@ const CardOverview = ({
 
       <div className="flex items-start justify-start gap-4">
         <div className="flex flex-col gap-1">
-          <label className="block text-sm text-neutral-400 mb-1">Size</label>
+          <label className="block text-sm text-[var(--text-secondary)] mb-1">Size</label>
           <SizeIndicator size={card.size} style="boxes" />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="block text-sm text-neutral-400 mb-1">
+          <label className="block text-sm text-[var(--text-secondary)] mb-1">
             Priority
           </label>
           <Badge priority={card.priority} />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="block text-sm text-neutral-400 mb-1">Status</label>
+          <label className="block text-sm text-[var(--text-secondary)] mb-1">Status</label>
           <AgeBadge
             lastModified={card.lastModified}
             createdAt={card.createdAt}
@@ -775,10 +765,10 @@ const CardOverview = ({
 
       {card.description && (
         <div className="border-t border-neutral-700 pt-4">
-          <label className="block text-sm text-neutral-400 mb-2">
+          <label className="block text-sm text-[var(--text-secondary)] mb-2">
             Description
           </label>
-          <p className="text-sm font-medium text-neutral-300 whitespace-pre-wrap break-words">
+          <p className="text-sm font-medium text-[var(--text)] whitespace-pre-wrap break-words">
             {card.description}
           </p>
         </div>
@@ -786,7 +776,7 @@ const CardOverview = ({
 
       {card.links && card.links.length > 0 && (
         <div className="border-t border-neutral-700 pt-4">
-          <label className="block text-sm text-neutral-400 mb-2">Links</label>
+          <label className="block text-sm text-[var(--text-secondary)] mb-2">Links</label>
           <div className="space-y-2">
             {card.links.map((link, index) => (
               <a
@@ -794,7 +784,7 @@ const CardOverview = ({
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300"
+                className="flex items-center gap-1.5 text-sm text-[var(--accent)] hover:text-[var(--accent-hover)]"
               >
                 <FaIcons.FaLink className="text-xs" />
                 <span>{link.title || link.url}</span>
@@ -805,7 +795,7 @@ const CardOverview = ({
       )}
 
       <div className="border-t border-neutral-700 pt-4">
-        <label className="block text-sm text-neutral-400 mb-2">
+        <label className="block text-sm text-[var(--text-secondary)] mb-2">
           Assignment
         </label>
         <TaskAssignmentOverview
@@ -1011,23 +1001,23 @@ const CardEdit = ({
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 h-[80vh] pb-20 overflow-y-scroll pr-9"
+      className="space-y-4 h-[80vh] pb-20 overflow-y-auto pr-9"
     >
       <div>
-        <label className="mb-1 block text-sm text-neutral-400">Title</label>
+        <label className="mb-1 block text-sm text-[var(--text-secondary)]">Title</label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+          className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm text-neutral-400">Type</label>
+        <label className="mb-1 block text-sm text-[var(--text-secondary)]">Type</label>
         <select
           value={taskType}
           onChange={(e) => setTaskType(e.target.value as TaskType)}
-          className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+          className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
         >
           <option value="task">Task (Simple, 1-2 hours)</option>
           <option value="bug">Bug</option>
@@ -1036,11 +1026,11 @@ const CardEdit = ({
       </div>
       <div className="flex gap-4">
         <div className="flex-1">
-          <label className="mb-1 block text-sm text-neutral-400">Size</label>
+          <label className="mb-1 block text-sm text-[var(--text-secondary)]">Size</label>
           <select
             value={size}
             onChange={(e) => setSize(e.target.value as Size)}
-            className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+            className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
           >
             <option value="S">Small</option>
             <option value="M">Medium</option>
@@ -1049,13 +1039,13 @@ const CardEdit = ({
           </select>
         </div>
         <div className="flex-1">
-          <label className="mb-1 block text-sm text-neutral-400">
+          <label className="mb-1 block text-sm text-[var(--text-secondary)]">
             Priority
           </label>
           <select
             value={priority}
             onChange={(e) => setPriority(e.target.value as Priority)}
-            className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+            className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
           >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
@@ -1064,18 +1054,18 @@ const CardEdit = ({
         </div>
       </div>
       <div>
-        <label className="mb-1 block text-sm text-neutral-400">
+        <label className="mb-1 block text-sm text-[var(--text-secondary)]">
           Description
         </label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={7}
-          className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+          className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm text-neutral-400">Links</label>
+        <label className="mb-1 block text-sm text-[var(--text-secondary)]">Links</label>
         <div className="space-y-2">
           {links.map((link, index) => (
             <div key={index} className="flex items-center gap-2">
@@ -1087,7 +1077,7 @@ const CardEdit = ({
                   newLinks[index].title = e.target.value;
                   setLinks(newLinks);
                 }}
-                className="flex-1 rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100 text-sm"
+                className="flex-1 rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)] text-sm"
                 placeholder="Link title"
               />
               <input
@@ -1098,7 +1088,7 @@ const CardEdit = ({
                   newLinks[index].url = e.target.value;
                   setLinks(newLinks);
                 }}
-                className="flex-1 rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100 text-sm"
+                className="flex-1 rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)] text-sm"
                 placeholder="https://..."
               />
               <button
@@ -1115,14 +1105,14 @@ const CardEdit = ({
               type="text"
               value={newLinkTitle}
               onChange={(e) => setNewLinkTitle(e.target.value)}
-              className="flex-1 rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100 text-sm"
+              className="flex-1 rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)] text-sm"
               placeholder="Link title"
             />
             <input
               type="url"
               value={newLinkUrl}
               onChange={(e) => setNewLinkUrl(e.target.value)}
-              className="flex-1 rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100 text-sm"
+              className="flex-1 rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)] text-sm"
               placeholder="https://..."
             />
             <button
@@ -1136,7 +1126,7 @@ const CardEdit = ({
         </div>
       </div>
       <div>
-        <label className="mb-1 block text-sm text-neutral-400">
+        <label className="mb-1 block text-sm text-[var(--text-secondary)]">
           Assignment
         </label>
         <TaskAssignment
@@ -1147,18 +1137,18 @@ const CardEdit = ({
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm text-neutral-400">
+        <label className="mb-1 block text-sm text-[var(--text-secondary)]">
           Created by
         </label>
         <input
           type="text"
           value={card.createdBy.email}
           readOnly
-          className="w-full rounded border border-neutral-700 bg-neutral-900/50 p-2 text-neutral-400 pointer-events-none"
+          className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text-secondary)] pointer-events-none"
         />
       </div>
       <div>
-        <label className="mb-1 block text-sm text-neutral-400">
+        <label className="mb-1 block text-sm text-[var(--text-secondary)]">
           Created on
         </label>
         <input
@@ -1169,10 +1159,10 @@ const CardEdit = ({
             new Date(card.createdAt).toLocaleTimeString()
           }
           readOnly
-          className="w-full rounded border border-neutral-700 bg-neutral-900/50 p-2 text-neutral-400 pointer-events-none"
+          className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text-secondary)] pointer-events-none"
         />
       </div>
-      <div className="flex justify-between h-18 absolute bottom-0 left-0 w-full p-4 rounded bg-neutral-800">
+      <div className="flex justify-between h-18 absolute bottom-0 left-0 w-full p-4 rounded bg-[var(--surface)]">
         <button
           type="button"
           onClick={handleDelete}
@@ -1185,13 +1175,13 @@ const CardEdit = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm text-neutral-400 hover:text-neutral-100"
+            className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text)]"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="rounded bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600"
+            className="rounded bg-[var(--accent)] px-4 py-2 text-sm text-white hover:bg-[var(--accent-hover)]"
           >
             Save Changes
           </button>
@@ -1211,7 +1201,7 @@ const DropIndicator = ({ beforeId, column }: DropIndicatorProps) => {
     <div
       data-before={beforeId || "-1"}
       data-column={column}
-      className="my-1 h-1 rounded w-full bg-blue-400/50 opacity-0"
+      className="my-1 h-1 rounded w-full bg-[var(--accent)] opacity-0"
     />
   );
 };
@@ -1321,7 +1311,7 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
       <motion.button
         layout
         onClick={() => setIsModalOpen(true)}
-        className="flex w-full justify-center items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-400 transition-colors hover:text-neutral-50 hover:bg-neutral-700 border border-neutral-700 rounded"
+        className="flex w-full justify-center items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--text)] hover:bg-[var(--surface)] border border-[var(--surface)] rounded"
       >
         <FiPlus />
         <span>Add Card</span>
@@ -1329,7 +1319,7 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <form
           onSubmit={handleSubmit}
-          className="space-y-4 h-[80vh] pb-20 overflow-y-scroll pr-9"
+          className="space-y-4 h-[80vh] pb-20 overflow-y-auto pr-9"
         >
           <div>
             <div className="flex items-center gap-2 mb-8">
@@ -1342,23 +1332,23 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
                 Add New Item
               </h2>
             </div>
-            <label className="mb-1 block text-sm text-neutral-400">Title</label>
+            <label className="mb-1 block text-sm text-[var(--text-secondary)]">Title</label>
             <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+              className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
               placeholder="Enter title..."
               autoFocus
             />
           </div>
           {/* Rest of the form fields remain the same, just updating the className structure to match CardEdit */}
           <div>
-            <label className="mb-1 block text-sm text-neutral-400">Type</label>
+            <label className="mb-1 block text-sm text-[var(--text-secondary)]">Type</label>
             <select
               value={taskType}
               onChange={(e) => setTaskType(e.target.value as TaskType)}
-              className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+              className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
             >
               <option value="task">Task (Simple, 1-2 hours)</option>
               <option value="bug">Bug</option>
@@ -1367,13 +1357,13 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="mb-1 block text-sm text-neutral-400">
+              <label className="mb-1 block text-sm text-[var(--text-secondary)]">
                 Size
               </label>
               <select
                 value={size}
                 onChange={(e) => setSize(e.target.value as Size)}
-                className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+                className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
               >
                 <option value="S">Small</option>
                 <option value="M">Medium</option>
@@ -1382,13 +1372,13 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
               </select>
             </div>
             <div className="flex-1">
-              <label className="mb-1 block text-sm text-neutral-400">
+              <label className="mb-1 block text-sm text-[var(--text-secondary)]">
                 Priority
               </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as Priority)}
-                className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+                className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -1397,18 +1387,18 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-neutral-400">
+            <label className="mb-1 block text-sm text-[var(--text-secondary)]">
               Description
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="w-full rounded border border-neutral-700 bg-neutral-900 p-2 text-neutral-100"
+              className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-neutral-400">
+            <label className="mb-1 block text-sm text-[var(--text-secondary)]">
               Assignment
             </label>
             <TaskAssignment
@@ -1419,18 +1409,18 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-neutral-400">
+            <label className="mb-1 block text-sm text-[var(--text-secondary)]">
               Created by
             </label>
             <input
               type="text"
               value={user?.email || ""}
               readOnly
-              className="w-full rounded border border-neutral-700 bg-neutral-900/50 p-2 text-neutral-400 pointer-events-none"
+              className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text-secondary)] pointer-events-none"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-neutral-400">
+            <label className="mb-1 block text-sm text-[var(--text-secondary)]">
               Created on
             </label>
             <input
@@ -1441,20 +1431,20 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
                 new Date().toLocaleTimeString()
               }
               readOnly
-              className="w-full rounded border border-neutral-700 bg-neutral-900/50 p-2 text-neutral-400 pointer-events-none"
+              className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text-secondary)] pointer-events-none"
             />
           </div>
-          <div className="flex justify-between h-18 absolute bottom-0 left-0 w-full p-4 rounded bg-neutral-800">
+          <div className="flex justify-between h-18 absolute bottom-0 left-0 w-full p-4 rounded bg-[var(--surface)]">
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-sm text-neutral-400 hover:text-neutral-100"
+              className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text)]"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="rounded bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600"
+              className="rounded bg-[var(--accent)] px-4 py-2 text-sm text-white hover:bg-[var(--accent-hover)]"
             >
               Create Task
             </button>
@@ -1535,15 +1525,15 @@ const TaskAssignment = ({
   }, [projectMembers]);
 
   return (
-    <div className="space-y-4 bg-neutral-900 p-1 rounded border border-neutral-700">
+    <div className="space-y-4 bg-[var(--surface)] p-1 rounded border border-[var(--border)]">
       <div className="flex flex-col gap-2">
         {projectMembers.map((member) => (
           <label
             key={member}
             className={`flex items-center gap-2 p-2 rounded cursor-pointer ${
               currentAssignee === member
-                ? "bg-blue-500/20 border border-blue-500"
-                : "bg-neutral-800 border border-neutral-700 hover:bg-neutral-700"
+                ? "bg-[var(--accent)]/20 border border-[var(--accent)]"
+                : "border border-[var(--border)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-hover)]"
             }`}
           >
             <input
@@ -1553,11 +1543,11 @@ const TaskAssignment = ({
               onChange={() => onAssign(member)}
               className="hidden"
             />
-            <span className="text-neutral-200">
+            <span className="text-[var(--text)]">
               {userDisplayNames[member] || member}
             </span>
             {currentAssignee === member && (
-              <span className="ml-auto text-xs text-blue-400">Assigned</span>
+              <span className="ml-auto text-xs text-[var(--accent)]">Assigned</span>
             )}
           </label>
         ))}
@@ -1601,10 +1591,10 @@ const TaskAssignmentOverview = ({
   if (currentAssignee) {
     return (
       <div className="flex flex-col gap-2">
-        <div className="p-2 rounded bg-blue-500/20 border border-blue-500">
+        <div className="p-2 rounded bg-[var(--accent)]/20 border border-[var(--accent)]">
           <div className="flex justify-between items-center">
-            <span className="text-neutral-200">{assigneeName}</span>
-            <span className="text-xs text-blue-400">Assigned</span>
+            <span className="text-[var(--text)]">{assigneeName}</span>
+            <span className="text-xs text-[var(--accent)]">Assigned</span>
           </div>
         </div>
         {currentAssignee === currentUserEmail && (

@@ -40,45 +40,45 @@ export default function NotificationsPage() {
           <div className="flex items-center gap-4 mb-6">
             <button
               onClick={() => router.back()}
-              className="p-2 hover:bg-neutral-800 rounded-lg transition-colors"
+              className="p-2 hover:bg-[var(--surface-hover)] rounded-lg transition-colors"
             >
-              <FaChevronLeft className="text-neutral-400" />
+              <FaChevronLeft className="text-[var(--text-secondary)]" />
             </button>
-            <h1 className="text-2xl font-bold text-white">Notifications</h1>
+            <h1 className="text-2xl font-bold text-[var(--text)]">Notifications</h1>
           </div>
-          <div className="bg-neutral-800 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">Project Invitations</h2>
+          <div className="bg-[var(--surface)] rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-[var(--text)] mb-4">Project Invitations</h2>
             <div className="space-y-4">
               {invitations.length === 0 ? (
-                <p className="text-neutral-400">No pending invitations</p>
+                <p className="text-[var(--text-secondary)]">No pending invitations</p>
               ) : (
                 invitations.map((invitation) => (
                   <div
                     key={invitation.id}
-                    className="bg-neutral-800 rounded-lg p-4 flex items-center justify-between"
+                    className="bg-[var(--surface)] rounded-lg p-4 flex items-center justify-between border border-[var(--border)]"
                   >
                     <div>
-                      <p className="text-white">
-                        <span className="text-neutral-400">
+                      <p className="text-[var(--text)]">
+                        <span className="text-[var(--text-secondary)]">
                           {senderNames[invitation.fromEmail] || invitation.fromEmail}
                         </span>{" "}
                         invited you to join{" "}
                         <span className="font-bold">{invitation.projectName}</span>
                       </p>
-                      <p className="text-sm text-neutral-500">
+                      <p className="text-sm text-[var(--text-secondary)]">
                         {new Date(invitation.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => acceptInvitation(invitation.id)}
-                        className="p-2 bg-green-500 rounded hover:bg-green-600"
+                        className="p-2 bg-green-500 rounded hover:bg-green-600 text-white"
                       >
                         <FaCheck />
                       </button>
                       <button
                         onClick={() => declineInvitation(invitation.id)}
-                        className="p-2 bg-red-500 rounded hover:bg-red-600"
+                        className="p-2 bg-red-500 rounded hover:bg-red-600 text-white"
                       >
                         <FaX />
                       </button>

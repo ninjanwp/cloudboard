@@ -22,16 +22,22 @@ export const Modal = ({ isOpen, onClose, children }: ModalProps) => {
             initial={{ scale: 0.5 }}
             animate={{ scale: 1 }}
             exit={{ scale: 0.5 }}
-            className="relative w-full max-w-xs sm:max-w-md rounded-lg bg-neutral-800 border border-neutral-700 p-3 my-auto"
+            className="relative w-full max-w-xs sm:max-w-md rounded-lg shadow-xl p-3 my-auto"
+            style={{
+              backgroundColor: 'var(--surface)',
+              borderColor: 'var(--border)',
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={onClose}
-              className="absolute right-4 top-4 text-neutral-400 hover:text-neutral-50"
+              className="absolute right-4 top-4 text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors"
             >
               <FiX size={20} />
             </button>
-            {children}
+            <div className="text-[var(--text)] [&_label]:text-[var(--text-secondary)] [&_p]:text-[var(--text)] [&_h2]:text-[var(--text)]">
+              {children}
+            </div>
           </motion.div>
         </motion.div>
       )}
