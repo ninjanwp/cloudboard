@@ -219,7 +219,8 @@ type ColumnProps = {
 
 const Column = ({
   title,
-  headingColor, // We'll keep this parameter in case it's used in props, but we won't reference it
+  // Remove or comment out the unused parameter
+  // headingColor, 
   cards,
   column,
   setCards,
