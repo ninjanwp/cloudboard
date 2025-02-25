@@ -31,7 +31,7 @@ export const Modal = ({ isOpen, onClose, children }: ModalProps) => {
           >
             <button
               onClick={onClose}
-              className="absolute right-4 top-4 text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors"
+              className="absolute -top-2 -right-2 rounded-full p-1 border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-red-400 transition-all hover:scale-95"
             >
               <FiX size={20} />
             </button>
