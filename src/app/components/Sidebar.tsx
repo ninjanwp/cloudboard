@@ -121,7 +121,6 @@ export const Sidebar = ({
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
-              transition={{ type: "tween", duration: 0.3 }}
             >
               <div className="p-3 flex items-center justify-between h-[60px] border-b border-[var(--surface)]">
                 <button

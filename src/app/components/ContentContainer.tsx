@@ -24,8 +24,8 @@ export const ContentContainer: React.FC<ContentContainerProps> = ({
   
   return (
     <Component 
-      className={`rounded-none md:rounded-tl-3xl bg-[var(--background)] overflow-auto ${
-        fullscreen ? "ml-0 md:ml-64" : ""
+      className={`rounded-none md:rounded-tl-3xl bg-[var(--background)] overflow-auto shadow-inner border-t border-l border-[var(--accent)] ${
+      fullscreen ? "ml-0 md:ml-64" : ""
       } ${className}`}
       initial={animate ? { opacity: 0, y: 20 } : undefined}
       animate={animate ? { opacity: 1, y: 0 } : undefined}

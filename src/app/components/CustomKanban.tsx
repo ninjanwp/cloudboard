@@ -33,7 +33,7 @@ const GridBackground = () => (
   <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 0.5 }}
-    className="absolute z-0 pointer-events-none inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"
+    className="absolute -z-10 pointer-events-none inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"
   />
 );
 
@@ -385,7 +385,7 @@ const Column = ({
     });
 
   return (
-    <div className="flex-grow w-56 shrink-0 px-2 z-10">
+    <div className="flex-grow w-56 shrink-0 px-2">
       <div className="mb-1 flex items-center justify-start gap-2 rounded bg-[var(--surface)]">
         <span className="rounded-l bg-[var(--surface)] font-mono px-3 py-2 text-[var(--accent)]">
           {filteredCards.length}
