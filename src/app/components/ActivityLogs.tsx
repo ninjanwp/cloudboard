@@ -26,7 +26,7 @@ export const ActivityLogs = ({ projectId }: { projectId: string }) => {
   const prevProjectIdRef = useRef<string | null>(null);
   const prevSelectedTypeRef = useRef<LogType | null>(null);
   const isCurrentlyFetching = useRef(false);
-  const ITEMS_PER_PAGE = 20;
+  const ITEMS_PER_PAGE = 5;
 
   // Cleanup function for when component unmounts
   useEffect(() => {
