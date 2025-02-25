@@ -28,7 +28,7 @@ export default function ProjectsLayout({
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-screen flex flex-col overflow-hidden">
       <Header>
         <div className="w-full max-w-md">
           <ProjectNav />
@@ -37,7 +37,7 @@ export default function ProjectsLayout({
       <div className="flex flex-1 pt-16 overflow-hidden">
         <Sidebar onCollapsedChange={setIsSidebarCollapsed} />
         <main
-          className={`flex-1 transition-all duration-300 max-h-screen overflow-y-auto h-[calc(100vh-16)] ${
+          className={`flex-1 transition-all duration-300 overflow-y-auto overflow-x-auto ${
             isSidebarCollapsed ? "ml-16" : "ml-64"
           }`}
         >
