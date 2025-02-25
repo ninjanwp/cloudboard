@@ -385,7 +385,7 @@ const Column = ({
     });
 
   return (
-    <div className="flex-grow w-56 shrink-0 px-2">
+    <div className="flex-grow w-56 shrink-0 px-2 z-10">
       <div className="mb-1 flex items-center justify-start gap-2 rounded bg-[var(--surface)]">
         <span className="rounded-l bg-[var(--surface)] font-mono px-3 py-2 text-[var(--accent)]">
           {filteredCards.length}
