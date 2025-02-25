@@ -10,10 +10,10 @@ import { useRouter, usePathname } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 
-export const Header = ({ 
+export const Header = ({
   children,
-  extraPadding = false
-}: { 
+  extraPadding = false,
+}: {
   children?: React.ReactNode;
   extraPadding?: boolean;
 }) => {
@@ -23,21 +23,21 @@ export const Header = ({
   const router = useRouter();
   const pathname = usePathname();
   const [userDisplayName, setUserDisplayName] = useState<string>("");
-  
+
   // Only hide logo on specific pages
-  const hideLogo = pathname === '/login' || pathname === '/register';
-  
+  const hideLogo = pathname === "/login" || pathname === "/register";
+
   // Detect if on mobile viewport
   const [isMobile, setIsMobile] = useState(false);
-  
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   useEffect(() => {
@@ -58,7 +58,11 @@ export const Header = ({
 
   return (
     <header className="fixed w-screen top-0 left-0 z-[100] bg-[var(--surface)]">
-      <div className={`flex justify-between items-center h-16 px-2 md:px-4 ${extraPadding ? 'lg:px-12' : ''}`}>
+      <div
+        className={`flex justify-between items-center h-16 px-2 md:px-4 ${
+          extraPadding ? "lg:px-12" : ""
+        }`}
+      >
         {/* Left section: Logo */}
         <div className="flex items-center">
           {/* Show logo except on login/register pages */}
@@ -72,10 +76,8 @@ export const Header = ({
         </div>
 
         {/* Middle section: Project navigation */}
-        <div className={`flex-1 overflow-hidden ${isMobile ? 'px-2' : 'ml-4'}`}>
-          <div className="w-full max-w-fit mx-auto">
-            {children}
-          </div>
+        <div className={`flex-1 overflow-hidden ${isMobile ? "px-2" : "ml-4"}`}>
+          <div className="w-full max-w-fit mx-auto">{children}</div>
         </div>
 
         {/* Right section: Notifications and user menu */}
@@ -83,10 +85,16 @@ export const Header = ({
           <div className="flex items-center gap-1 md:gap-4">
             {/* Notifications */}
             <button
-              onClick={() => router.push('/notifications')}
-              className="relative p-1 md:p-1.5 text-[var(--text-secondary)] hover:text-[var(--text)]"
+              onClick={() => router.push("/notifications")}
+              className="relative p-1 md:p-1.5 text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] rounded transition-colors"
             >
-              <FaBell className="w-4 h-4 md:w-5 md:h-5" />
+              <motion.div
+              initial={{ rotate: 0 }}
+              whileHover={{ rotate: [0, -5, 5, -5, 5, -5, 0] }}
+              >
+                <FaBell className="w-4 h-4 md:w-5 md:h-5" />
+              </motion.div>
+
               {invitations.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-3 h-3 md:w-4 md:h-4 flex items-center justify-center">
                   {invitations.length}
@@ -98,7 +106,7 @@ export const Header = ({
             <div className="relative">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-1 md:gap-2 p-1 md:p-1.5 text-[var(--text-secondary)] hover:text-[var(--text)]"
+                className="flex items-center gap-1 md:gap-2 p-1 md:p-1.5 text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] rounded transition-colors"
               >
                 {user.photoURL ? (
                   <img
@@ -109,9 +117,15 @@ export const Header = ({
                 ) : (
                   <FaUser className="w-4 h-4 md:w-5 md:h-5" />
                 )}
-                <span className="text-sm hidden lg:inline">{userDisplayName}</span>
+                <span className="text-sm hidden lg:inline">
+                  {userDisplayName}
+                </span>
                 {!isMobile && (
-                  <FaChevronDown className={`w-3 h-3 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                  <FaChevronDown
+                    className={`w-3 h-3 transition-transform ${
+                      isUserMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
                 )}
               </button>
 
@@ -124,7 +138,7 @@ export const Header = ({
                     className="absolute right-0 mt-2 w-48 bg-[var(--surface)] rounded-lg shadow-lg overflow-hidden z-50"
                   >
                     <Link href="/settings">
-                      <div className="px-4 py-2 text-sm text-[var(--text)] hover:bg-[var(--background)] cursor-pointer">
+                      <div className="px-4 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-hover)] cursor-pointer">
                         Settings
                       </div>
                     </Link>
@@ -133,7 +147,7 @@ export const Header = ({
                         setIsUserMenuOpen(false);
                         handleSignOut();
                       }}
-                      className="px-4 py-2 text-sm text-red-400 hover:bg-[var(--background)] cursor-pointer"
+                      className="px-4 py-2 text-sm text-red-400 hover:bg-[var(--surface-hover)] cursor-pointer"
                     >
                       Log Out
                     </div>
@@ -145,7 +159,7 @@ export const Header = ({
         ) : (
           <button
             onClick={() => setIsSignInModalOpen(true)}
-            className="rounded-lg bg-white/10 px-3 py-1.5 md:px-4 md:py-2 text-sm text-[var(--text)] backdrop-blur-sm transition hover:bg-white/20"
+            className="rounded-lg bg-white/10 px-3 py-1.5 md:px-4 md:py-2 text-sm text-[var(--text)] backdrop-blur-sm transition hover:bg-[var(--surface-hover)]"
           >
             Log In
           </button>

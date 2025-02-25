@@ -399,7 +399,7 @@ const Column = ({
         className={classNames(
           "h-full w-full transition-colors rounded border",
           active
-            ? "bg-[var(--border)] border-[var(--accent)]"
+            ? "border-[var(--accent)]"
             : "border-transparent"
         )}
       >
@@ -577,7 +577,7 @@ const Card = ({ ...props }: CardProps) => {
             size: props.size,
           })
         }
-        className="cursor-grab rounded border border-[var(--surface)] bg-[var(--surface)] p-3 hover:border-[var(--accent)] active:cursor-grabbing select-none"
+        className="cursor-grab rounded border border-[var(--surface)] bg-[var(--surface)] p-3 hover:border-[var(--accent)] active:cursor-grabbing select-none transition-colors"
       >
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-2 items-start justify-between">
