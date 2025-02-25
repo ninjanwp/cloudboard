@@ -386,7 +386,7 @@ const Column = ({
 
   return (
     <div className="flex-grow w-56 shrink-0 px-2">
-      <div className="mb-1 flex items-center justify-start gap-2 rounded bg-[var(--surface)] bg-opacity-50">
+      <div className="mb-1 flex items-center justify-start gap-2 rounded bg-[var(--surface)]">
         <span className="rounded-l bg-[var(--surface)] font-mono px-3 py-2 text-[var(--accent)]">
           {filteredCards.length}
         </span>
@@ -577,7 +577,7 @@ const Card = ({ ...props }: CardProps) => {
             size: props.size,
           })
         }
-        className="cursor-grab rounded border border-[var(--surface)] bg-[var(--surface)] p-3 hover:border-[var(--text-secondary)] active:cursor-grabbing select-none"
+        className="cursor-grab rounded border border-[var(--surface)] bg-[var(--surface)] p-3 hover:border-[var(--accent)] active:cursor-grabbing select-none"
       >
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-2 items-start justify-between">
