@@ -43,6 +43,21 @@ export const ActivityLogs = ({ projectId }: { projectId: string }) => {
     }
   };
 
+  // Fetch user names for all actors
+  const fetchUserNames = useCallback(async (actors: string[]) => {
+    const newNames: {[key: string]: string} = {};
+    
+    for (const actor of actors) {
+      if (!userNamesRef.current[actor]) {
+        newNames[actor] = await getUserDisplayName(actor);
+      }
+    }
+
+    if (Object.keys(newNames).length > 0) {
+      userNamesRef.current = { ...userNamesRef.current, ...newNames };
+    }
+  }, []);
+
   // Updated fetch logs function that uses state instead of ref
   const fetchLogs = useCallback(async (loadMore = false) => {
     if (isCurrentlyFetching.current || !projectId) return;
@@ -127,21 +142,6 @@ export const ActivityLogs = ({ projectId }: { projectId: string }) => {
       isCurrentlyFetching.current = false;
     }
   }, [projectId, selectedType, lastVisible, ITEMS_PER_PAGE, logs.length, fetchUserNames]);
-
-  // Fetch user names for all actors
-  const fetchUserNames = useCallback(async (actors: string[]) => {
-    const newNames: {[key: string]: string} = {};
-    
-    for (const actor of actors) {
-      if (!userNamesRef.current[actor]) {
-        newNames[actor] = await getUserDisplayName(actor);
-      }
-    }
-
-    if (Object.keys(newNames).length > 0) {
-      userNamesRef.current = { ...userNamesRef.current, ...newNames };
-    }
-  }, []);
 
   // Fetch logs when project or selectedType changes
   useEffect(() => {
