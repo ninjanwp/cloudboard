@@ -151,7 +151,7 @@ const Board = ({
   return (
     <div className="relative w-full h-full">
       <GridBackground />
-      <div className="h-full w-full overflow-x-auto overflow-y-hidden pb-24">
+      <div className="h-full w-full overflow-auto pb-24">
         <div className="flex min-w-max p-6">
           <Column
             title="Backlog"
