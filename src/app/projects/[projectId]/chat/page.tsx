@@ -23,7 +23,7 @@ import { FaPaperPlane, FaSpinner } from "react-icons/fa6"; // Remove FaUser
 import { getUserDisplayName } from "../../../utils/userUtils";
 import { createLog } from "../../../utils/logUtils";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image"; // Add this import
+import Image from "next/image";
 
 // Types defined as before
 type Message = {
@@ -60,16 +60,27 @@ const UserAvatar = ({
   };
 
   const classes = `${sizeClasses[size]} rounded-full flex items-center justify-center flex-shrink-0 ${className}`;
+  
+  // Get numeric dimensions from the size classes
+  const getDimension = (sizeClass: string) => {
+    return parseInt(sizeClass.split(" ")[0].replace("w-", "")) * 4;
+  };
+
+  const width = getDimension(sizeClasses[size]);
+  // Removed the unused height variable
 
   if (photoURL) {
     return (
-      <Image
-        src={photoURL}
-        alt={`${email}'s avatar`}
-        width={parseInt(sizeClasses[size].split(" ")[0].replace("w-", "")) * 4}
-        height={parseInt(sizeClasses[size].split(" ")[1].replace("h-", "")) * 4}
-        className={classes}
-      />
+      <div className={`${classes} overflow-hidden relative`}>
+        <Image
+          src={photoURL}
+          alt={`${email}'s avatar`}
+          fill
+          sizes={`${width}px`}
+          className="object-cover"
+          unoptimized // This is important for external images
+        />
+      </div>
     );
   }
 
@@ -398,7 +409,7 @@ export default function ProjectChatPage() {
     }
   };
 
-  // Group messages both by date and by consecutive sender
+  // Group messages both by date, consecutive sender, and time gaps
   const groupMessagesByDateAndSender = () => {
     const dateGroups: {
       date: string;
@@ -408,9 +419,17 @@ export default function ProjectChatPage() {
     let currentDateGroup: { sender: string; messages: Message[] }[] = [];
     let currentSender = "";
     let currentSenderMessages: Message[] = [];
+    let lastMessageTime = new Date(0); // Initialize with epoch time
+
+    // Time gap threshold in milliseconds (5 minutes)
+    const TIME_GAP_THRESHOLD = 5 * 60 * 1000;
 
     messages.forEach((message) => {
-      const messageDate = formatMessageDate(message.timestamp instanceof Date ? message.timestamp : message.timestamp.toDate());
+      const messageTime = message.timestamp instanceof Date 
+        ? message.timestamp 
+        : message.timestamp.toDate();
+      
+      const messageDate = formatMessageDate(messageTime);
 
       // Check if we need to start a new date group
       if (messageDate !== currentDate) {
@@ -435,9 +454,12 @@ export default function ProjectChatPage() {
         currentDate = messageDate;
         currentSender = message.sender;
         currentSenderMessages = [message];
+        lastMessageTime = messageTime;
       } else {
-        // Same date, check if sender changed
-        if (message.sender !== currentSender) {
+        // Same date, check if sender changed or if too much time has passed
+        const timeDiff = messageTime.getTime() - lastMessageTime.getTime();
+        
+        if (message.sender !== currentSender || timeDiff > TIME_GAP_THRESHOLD) {
           // Close current sender group
           if (currentSenderMessages.length > 0) {
             currentDateGroup.push({
@@ -450,9 +472,12 @@ export default function ProjectChatPage() {
           currentSender = message.sender;
           currentSenderMessages = [message];
         } else {
-          // Same sender, just add the message
+          // Same sender and within time threshold, add the message
           currentSenderMessages.push(message);
         }
+        
+        // Always update last message time
+        lastMessageTime = messageTime;
       }
     });
 

@@ -110,13 +110,16 @@ export const Header = ({
                 className="flex items-center gap-1 md:gap-2 p-1 md:p-1.5 text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] rounded transition-colors"
               >
                 {user.photoURL ? (
-                  <Image
-                    src={user.photoURL}
-                    alt="User avatar"
-                    width={28}
-                    height={28}
-                    className="rounded-full"
-                  />
+                  <div className="w-7 h-7 rounded-full overflow-hidden relative">
+                    <Image
+                      src={user.photoURL}
+                      alt="User avatar"
+                      width={28}
+                      height={28}
+                      className="object-cover"
+                      unoptimized // This is important to prevent optimization issues with external domains
+                    />
+                  </div>
                 ) : (
                   <FaUser className="w-4 h-4 md:w-5 md:h-5" />
                 )}
