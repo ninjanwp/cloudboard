@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
+import Image from "next/image";
 
 export const Header = ({
   children,
@@ -109,10 +110,12 @@ export const Header = ({
                 className="flex items-center gap-1 md:gap-2 p-1 md:p-1.5 text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] rounded transition-colors"
               >
                 {user.photoURL ? (
-                  <img
+                  <Image
                     src={user.photoURL}
                     alt="User avatar"
-                    className="w-6 h-6 md:w-7 md:h-7 rounded-full"
+                    width={28}
+                    height={28}
+                    className="rounded-full"
                   />
                 ) : (
                   <FaUser className="w-4 h-4 md:w-5 md:h-5" />

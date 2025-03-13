@@ -19,10 +19,11 @@ import {
   where,
   Timestamp,
 } from "firebase/firestore";
-import { FaPaperPlane, FaSpinner, FaUser } from "react-icons/fa6";
+import { FaPaperPlane, FaSpinner } from "react-icons/fa6"; // Remove FaUser
 import { getUserDisplayName } from "../../../utils/userUtils";
 import { createLog } from "../../../utils/logUtils";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image"; // Add this import
 
 // Types defined as before
 type Message = {
@@ -30,7 +31,7 @@ type Message = {
   text: string;
   sender: string;
   senderName: string;
-  timestamp: any;
+  timestamp: Timestamp | Date; // Replace any with proper type
 };
 
 type TypingUser = {
@@ -62,13 +63,13 @@ const UserAvatar = ({
 
   if (photoURL) {
     return (
-      <div className={classes} style={{ overflow: "hidden" }}>
-        <img
-          src={photoURL}
-          alt={email}
-          className="w-full h-full object-cover"
-        />
-      </div>
+      <Image
+        src={photoURL}
+        alt={`${email}'s avatar`}
+        width={parseInt(sizeClasses[size].split(" ")[0].replace("w-", "")) * 4}
+        height={parseInt(sizeClasses[size].split(" ")[1].replace("h-", "")) * 4}
+        className={classes}
+      />
     );
   }
 
@@ -110,7 +111,6 @@ export default function ProjectChatPage() {
   const [userPhotos, setUserPhotos] = useState<{
     [email: string]: string;
   }>({});
-  const [projectMembers, setProjectMembers] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
@@ -130,8 +130,9 @@ export default function ProjectChatPage() {
           return;
         }
 
+        // Use a local variable instead of state since we're only using it
+        // to load display names and photos
         const members = projectSnap.data().members || [];
-        setProjectMembers(members);
 
         // Load display names and photos for all members
         const names: { [email: string]: string } = {};
@@ -409,7 +410,7 @@ export default function ProjectChatPage() {
     let currentSenderMessages: Message[] = [];
 
     messages.forEach((message) => {
-      const messageDate = formatMessageDate(new Date(message.timestamp));
+      const messageDate = formatMessageDate(message.timestamp instanceof Date ? message.timestamp : message.timestamp.toDate());
 
       // Check if we need to start a new date group
       if (messageDate !== currentDate) {
@@ -559,7 +560,9 @@ export default function ProjectChatPage() {
                               </span>
                               <span className="ml-2 text-xs text-[var(--text-secondary)]">
                                 {formatMessageTime(
-                                  new Date(senderGroup.messages[0].timestamp)
+                                  senderGroup.messages[0].timestamp instanceof Date 
+                                    ? senderGroup.messages[0].timestamp 
+                                    : senderGroup.messages[0].timestamp.toDate()
                                 )}
                               </span>
                             </div>
