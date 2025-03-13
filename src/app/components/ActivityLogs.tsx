@@ -8,6 +8,7 @@ const LOG_TYPES = [
   { label: 'All', value: null },
   { label: 'Tasks', value: 'task' },
   { label: 'Assignments', value: 'assignment' },
+  { label: 'Chat', value: 'chat' },
   { label: 'Members', value: 'member' },
   { label: 'Projects', value: 'project' }
 ];
