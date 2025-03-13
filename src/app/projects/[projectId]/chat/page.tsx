@@ -130,24 +130,23 @@ export default function ProjectChatPage() {
     if (!projectId || !user?.email) return;
 
     const typingRef = collection(db, `projects/${projectId}/typing`);
-    // Filter out our own typing status from the UI (though we track it for others)
-    const q = query(
-      typingRef,
-      where("email", "!=", user.email),
-      orderBy("email"),
-      orderBy("timestamp", "desc")
-    );
+    // Simplify the query to avoid requiring a composite index
+    const q = query(typingRef, orderBy("timestamp", "desc"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const now = new Date().getTime();
       const typingData: TypingUser[] = [];
-      
+
       snapshot.forEach((doc) => {
         const data = doc.data();
         const timestamp = data.timestamp?.toDate();
-        
-        // Only show typing indicators that are recent (less than 10 seconds old)
-        if (timestamp && now - timestamp.getTime() < 10000) {
+
+        // Filter out own typing status and ensure recent timestamp in client code
+        if (
+          data.email !== user.email &&
+          timestamp &&
+          now - timestamp.getTime() < 10000
+        ) {
           typingData.push({
             id: doc.id,
             displayName: data.displayName || data.email,
@@ -155,7 +154,7 @@ export default function ProjectChatPage() {
           });
         }
       });
-      
+
       setTypingUsers(typingData);
     });
 
@@ -166,7 +165,11 @@ export default function ProjectChatPage() {
   useEffect(() => {
     return () => {
       if (projectId && user?.email) {
-        const typingDocRef = doc(db, `projects/${projectId}/typing`, user.email);
+        const typingDocRef = doc(
+          db,
+          `projects/${projectId}/typing`,
+          user.email
+        );
         deleteDoc(typingDocRef).catch(console.error);
       }
       if (typingTimeoutRef.current) {
@@ -187,7 +190,7 @@ export default function ProjectChatPage() {
     // Only update if it's been more than 2 seconds since the last update
     if (now - lastTypedRef.current > 2000) {
       lastTypedRef.current = now;
-      
+
       const typingDocRef = doc(db, `projects/${projectId}/typing`, user.email);
       setDoc(typingDocRef, {
         email: user.email,
@@ -204,7 +207,11 @@ export default function ProjectChatPage() {
     // Set typing status to expire after 5 seconds of no typing
     typingTimeoutRef.current = setTimeout(() => {
       if (projectId && user?.email) {
-        const typingDocRef = doc(db, `projects/${projectId}/typing`, user.email);
+        const typingDocRef = doc(
+          db,
+          `projects/${projectId}/typing`,
+          user.email
+        );
         deleteDoc(typingDocRef).catch(console.error);
       }
     }, 5000);
@@ -213,7 +220,7 @@ export default function ProjectChatPage() {
   const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const text = e.target.value;
     setNewMessage(text);
-    
+
     // Only update typing status if there is text
     if (text.trim()) {
       updateTypingStatus();
@@ -221,7 +228,11 @@ export default function ProjectChatPage() {
       // If the input is cleared, remove typing status immediately
       clearTimeout(typingTimeoutRef.current);
       if (projectId && user?.email) {
-        const typingDocRef = doc(db, `projects/${projectId}/typing`, user.email);
+        const typingDocRef = doc(
+          db,
+          `projects/${projectId}/typing`,
+          user.email
+        );
         deleteDoc(typingDocRef).catch(console.error);
       }
     }
@@ -237,7 +248,11 @@ export default function ProjectChatPage() {
 
       // Clear typing indicator immediately when sending
       if (projectId && user?.email) {
-        const typingDocRef = doc(db, `projects/${projectId}/typing`, user.email);
+        const typingDocRef = doc(
+          db,
+          `projects/${projectId}/typing`,
+          user.email
+        );
         await deleteDoc(typingDocRef);
       }
 
@@ -261,7 +276,7 @@ export default function ProjectChatPage() {
       );
 
       setNewMessage("");
-      
+
       // Reset the typing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -327,13 +342,15 @@ export default function ProjectChatPage() {
   // Format the typing indicator text
   const formatTypingText = () => {
     if (typingUsers.length === 0) return null;
-    
+
     if (typingUsers.length === 1) {
       return `${typingUsers[0].displayName} is typing...`;
     } else if (typingUsers.length === 2) {
       return `${typingUsers[0].displayName} and ${typingUsers[1].displayName} are typing...`;
     } else {
-      return `${typingUsers[0].displayName} and ${typingUsers.length - 1} others are typing...`;
+      return `${typingUsers[0].displayName} and ${
+        typingUsers.length - 1
+      } others are typing...`;
     }
   };
 
