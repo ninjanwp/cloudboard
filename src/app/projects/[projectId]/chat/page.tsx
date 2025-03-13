@@ -13,16 +13,18 @@ import {
   serverTimestamp,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   deleteDoc,
   where,
   Timestamp,
 } from "firebase/firestore";
-import { FaPaperPlane, FaSpinner } from "react-icons/fa6";
+import { FaPaperPlane, FaSpinner, FaUser } from "react-icons/fa6";
 import { getUserDisplayName } from "../../../utils/userUtils";
 import { createLog } from "../../../utils/logUtils";
 import { motion, AnimatePresence } from "framer-motion";
 
+// Types defined as before
 type Message = {
   id: string;
   text: string;
@@ -35,6 +37,64 @@ type TypingUser = {
   id: string;
   displayName: string;
   timestamp: Date;
+  photoURL?: string;
+};
+
+// User avatar component that displays profile image or fallback
+const UserAvatar = ({
+  email,
+  photoURL,
+  size = "md",
+  className = "",
+}: {
+  email: string;
+  photoURL?: string;
+  size?: "sm" | "md" | "lg";
+  className?: string;
+}) => {
+  const sizeClasses = {
+    sm: "w-6 h-6 text-xs",
+    md: "w-9 h-9 text-sm",
+    lg: "w-12 h-12 text-base",
+  };
+
+  const classes = `${sizeClasses[size]} rounded-full flex items-center justify-center flex-shrink-0 ${className}`;
+
+  if (photoURL) {
+    return (
+      <div className={classes} style={{ overflow: "hidden" }}>
+        <img
+          src={photoURL}
+          alt={email}
+          className="w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
+
+  // Fallback to first letter of email with colored background
+  const initial = email.charAt(0).toUpperCase();
+  const hashCode = Array.from(email).reduce(
+    (acc, char) => acc + char.charCodeAt(0),
+    0
+  );
+  const colors = [
+    "bg-blue-500",
+    "bg-purple-500",
+    "bg-green-500",
+    "bg-yellow-500",
+    "bg-pink-500",
+    "bg-indigo-500",
+    "bg-red-500",
+    "bg-teal-500",
+  ];
+  const colorClass = colors[hashCode % colors.length];
+
+  return (
+    <div className={`${classes} ${colorClass} text-white font-medium`}>
+      {initial}
+    </div>
+  );
 };
 
 export default function ProjectChatPage() {
@@ -47,14 +107,18 @@ export default function ProjectChatPage() {
   const [userDisplayNames, setUserDisplayNames] = useState<{
     [email: string]: string;
   }>({});
+  const [userPhotos, setUserPhotos] = useState<{
+    [email: string]: string;
+  }>({});
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastTypedRef = useRef<number>(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch project members
+  // Fetch project members and their photos
   useEffect(() => {
     const fetchProjectMembers = async () => {
       try {
@@ -69,12 +133,28 @@ export default function ProjectChatPage() {
         const members = projectSnap.data().members || [];
         setProjectMembers(members);
 
-        // Load display names for all members
+        // Load display names and photos for all members
         const names: { [email: string]: string } = {};
+        const photos: { [email: string]: string } = {};
+
         for (const member of members) {
           names[member] = await getUserDisplayName(member);
+
+          // Get user photo if available
+          const usersRef = collection(db, "users");
+          const q = query(usersRef, where("email", "==", member));
+          const querySnapshot = await getDocs(q);
+
+          if (!querySnapshot.empty) {
+            const userData = querySnapshot.docs[0].data();
+            if (userData.photoURL) {
+              photos[member] = userData.photoURL;
+            }
+          }
         }
+
         setUserDisplayNames(names);
+        setUserPhotos(photos);
       } catch (err) {
         console.error("Error fetching project members:", err);
         setError("Failed to load project data");
@@ -86,7 +166,7 @@ export default function ProjectChatPage() {
     }
   }, [projectId]);
 
-  // Fetch messages
+  // Fetch messages (unchanged)
   useEffect(() => {
     if (!projectId) return;
 
@@ -125,12 +205,11 @@ export default function ProjectChatPage() {
     return () => unsubscribe();
   }, [projectId]);
 
-  // Set up typing indicator listener
+  // Set up typing indicator listener (unchanged)
   useEffect(() => {
     if (!projectId || !user?.email) return;
 
     const typingRef = collection(db, `projects/${projectId}/typing`);
-    // Simplify the query to avoid requiring a composite index
     const q = query(typingRef, orderBy("timestamp", "desc"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -141,7 +220,7 @@ export default function ProjectChatPage() {
         const data = doc.data();
         const timestamp = data.timestamp?.toDate();
 
-        // Filter out own typing status and ensure recent timestamp in client code
+        // Filter out own typing status and ensure recent timestamp
         if (
           data.email !== user.email &&
           timestamp &&
@@ -151,6 +230,7 @@ export default function ProjectChatPage() {
             id: doc.id,
             displayName: data.displayName || data.email,
             timestamp: timestamp,
+            photoURL: userPhotos[data.email],
           });
         }
       });
@@ -159,9 +239,9 @@ export default function ProjectChatPage() {
     });
 
     return () => unsubscribe();
-  }, [projectId, user?.email]);
+  }, [projectId, user?.email, userPhotos]);
 
-  // Clean up typing status when component unmounts
+  // Clean up typing status (unchanged)
   useEffect(() => {
     return () => {
       if (projectId && user?.email) {
@@ -182,7 +262,7 @@ export default function ProjectChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Debounced function to update typing status
+  // Debounced function to update typing status (unchanged)
   const updateTypingStatus = useCallback(() => {
     if (!projectId || !user?.email) return;
 
@@ -238,6 +318,11 @@ export default function ProjectChatPage() {
     }
   };
 
+  useEffect(() => {
+    // Focus the input field when component mounts
+    inputRef.current?.focus();
+  }, []);
+
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -281,6 +366,11 @@ export default function ProjectChatPage() {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
+
+      // Use a short timeout to make sure the input is refocused after state updates
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 10);
     } catch (err) {
       console.error("Error sending message:", err);
       setError("Failed to send message");
@@ -307,36 +397,80 @@ export default function ProjectChatPage() {
     }
   };
 
-  const groupMessagesByDate = () => {
-    const groups: { date: string; messages: Message[] }[] = [];
+  // Group messages both by date and by consecutive sender
+  const groupMessagesByDateAndSender = () => {
+    const dateGroups: {
+      date: string;
+      messageGroups: { sender: string; messages: Message[] }[];
+    }[] = [];
     let currentDate = "";
-    let currentGroup: Message[] = [];
+    let currentDateGroup: { sender: string; messages: Message[] }[] = [];
+    let currentSender = "";
+    let currentSenderMessages: Message[] = [];
 
     messages.forEach((message) => {
       const messageDate = formatMessageDate(new Date(message.timestamp));
 
+      // Check if we need to start a new date group
       if (messageDate !== currentDate) {
-        if (currentGroup.length > 0) {
-          groups.push({
-            date: currentDate,
-            messages: [...currentGroup],
+        // First, close any open sender group
+        if (currentSenderMessages.length > 0) {
+          currentDateGroup.push({
+            sender: currentSender,
+            messages: [...currentSenderMessages],
           });
+          currentSenderMessages = [];
         }
+
+        // Then close the date group if it has messages
+        if (currentDateGroup.length > 0) {
+          dateGroups.push({
+            date: currentDate,
+            messageGroups: [...currentDateGroup],
+          });
+          currentDateGroup = [];
+        }
+
         currentDate = messageDate;
-        currentGroup = [message];
+        currentSender = message.sender;
+        currentSenderMessages = [message];
       } else {
-        currentGroup.push(message);
+        // Same date, check if sender changed
+        if (message.sender !== currentSender) {
+          // Close current sender group
+          if (currentSenderMessages.length > 0) {
+            currentDateGroup.push({
+              sender: currentSender,
+              messages: [...currentSenderMessages],
+            });
+            currentSenderMessages = [];
+          }
+
+          currentSender = message.sender;
+          currentSenderMessages = [message];
+        } else {
+          // Same sender, just add the message
+          currentSenderMessages.push(message);
+        }
       }
     });
 
-    if (currentGroup.length > 0) {
-      groups.push({
-        date: currentDate,
-        messages: [...currentGroup],
+    // Clean up any remaining groups
+    if (currentSenderMessages.length > 0) {
+      currentDateGroup.push({
+        sender: currentSender,
+        messages: [...currentSenderMessages],
       });
     }
 
-    return groups;
+    if (currentDateGroup.length > 0) {
+      dateGroups.push({
+        date: currentDate,
+        messageGroups: [...currentDateGroup],
+      });
+    }
+
+    return dateGroups;
   };
 
   // Format the typing indicator text
@@ -375,64 +509,93 @@ export default function ProjectChatPage() {
         ) : (
           <div className="h-full flex flex-col overflow-y-auto">
             <div className="flex-1 overflow-y-auto pr-2">
-              {groupMessagesByDate().map((group, groupIndex) => (
-                <div key={`group-${groupIndex}`} className="mb-6">
+              {groupMessagesByDateAndSender().map((dateGroup, dateIndex) => (
+                <div key={`date-${dateIndex}`} className="mb-6">
                   <div className="flex justify-center mb-4">
                     <div className="bg-[var(--surface)] px-4 py-1 rounded-full text-sm text-[var(--text-secondary)]">
-                      {group.date}
+                      {dateGroup.date}
                     </div>
                   </div>
 
-                  <AnimatePresence>
-                    {group.messages.map((message) => (
-                      <motion.div
-                        key={message.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className={`flex mb-4 ${
-                          message.sender === user?.email
-                            ? "justify-end"
-                            : "justify-start"
-                        }`}
+                  {dateGroup.messageGroups.map((senderGroup, sgIndex) => {
+                    const isCurrentUser = senderGroup.sender === user?.email;
+                    return (
+                      <div
+                        key={`${dateGroup.date}-${sgIndex}`}
+                        className="mb-6"
                       >
                         <div
-                          className={`max-w-[80%] rounded-lg p-3 ${
-                            message.sender === user?.email
-                              ? "bg-[var(--accent)] text-white"
-                              : "bg-[var(--surface)] text-[var(--text)]"
+                          className={`flex items-start ${
+                            isCurrentUser ? "justify-end" : ""
                           }`}
                         >
-                          <div className="flex items-center mb-1">
-                            <span
-                              className={`text-sm font-medium ${
-                                message.sender === user?.email
-                                  ? "text-white/80"
-                                  : "text-[var(--accent)]"
+                          {/* Avatar for other users displayed on the left */}
+                          {!isCurrentUser && (
+                            <UserAvatar
+                              email={senderGroup.sender}
+                              photoURL={userPhotos[senderGroup.sender]}
+                              className="mr-3 mt-0.5"
+                              size="md"
+                            />
+                          )}
+
+                          <div
+                            className={`flex-1 max-w-[80%] ${
+                              isCurrentUser ? "text-right" : ""
+                            }`}
+                          >
+                            <div
+                              className={`flex items-center mb-1 ${
+                                isCurrentUser ? "justify-end" : ""
                               }`}
                             >
-                              {message.sender === user?.email
-                                ? "You"
-                                : userDisplayNames[message.sender] ||
-                                  message.senderName ||
-                                  message.sender}
-                            </span>
-                            <span
-                              className={`ml-2 text-xs ${
-                                message.sender === user?.email
-                                  ? "text-white/60"
-                                  : "text-[var(--text-secondary)]"
-                              }`}
-                            >
-                              {formatMessageTime(new Date(message.timestamp))}
-                            </span>
+                              <span
+                                className={`text-sm font-medium text-[var(--accent)]`}
+                              >
+                                {isCurrentUser
+                                  ? "You"
+                                  : userDisplayNames[senderGroup.sender] ||
+                                    senderGroup.sender}
+                              </span>
+                              <span className="ml-2 text-xs text-[var(--text-secondary)]">
+                                {formatMessageTime(
+                                  new Date(senderGroup.messages[0].timestamp)
+                                )}
+                              </span>
+                            </div>
+
+                            <div className="space-y-1">
+                              {senderGroup.messages.map((message, msgIndex) => (
+                                <motion.div
+                                  key={message.id}
+                                  initial={{ opacity: 0, y: 5 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: msgIndex * 0.05 }}
+                                  className={`block w-full text-[var(--text)] ${
+                                    isCurrentUser ? "text-right" : "text-left"
+                                  }`}
+                                >
+                                  <p className="whitespace-pre-wrap break-words inline-block text-left">
+                                    {message.text}
+                                  </p>
+                                </motion.div>
+                              ))}
+                            </div>
                           </div>
-                          <p className="whitespace-pre-wrap break-words">
-                            {message.text}
-                          </p>
+
+                          {/* Avatar for current user displayed on the right */}
+                          {isCurrentUser && (
+                            <UserAvatar
+                              email={senderGroup.sender}
+                              photoURL={user?.photoURL || undefined}
+                              className="ml-3 mt-0.5"
+                              size="md"
+                            />
+                          )}
                         </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
               <div ref={messagesEndRef} />
@@ -441,7 +604,7 @@ export default function ProjectChatPage() {
         )}
       </div>
 
-      {/* Typing indicator */}
+      {/* Typing indicator with avatars */}
       <AnimatePresence>
         {typingUsers.length > 0 && (
           <motion.div
@@ -451,8 +614,21 @@ export default function ProjectChatPage() {
             className="px-4 pb-2 text-sm text-[var(--text-secondary)] italic"
           >
             <div className="flex items-center gap-2">
-              <TypingAnimation />
-              {formatTypingText()}
+              <div className="flex -space-x-2">
+                {typingUsers.slice(0, 3).map((user) => (
+                  <UserAvatar
+                    key={user.id}
+                    email={user.id}
+                    photoURL={userPhotos[user.id]}
+                    size="sm"
+                    className="border-2 border-[var(--background)]"
+                  />
+                ))}
+              </div>
+              <div className="flex items-center gap-1">
+                <TypingAnimation />
+                {formatTypingText()}
+              </div>
             </div>
           </motion.div>
         )}
@@ -462,21 +638,23 @@ export default function ProjectChatPage() {
         onSubmit={handleSendMessage}
         className="border-t border-[var(--border)] p-4 bg-[var(--surface)]"
       >
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           <input
+            ref={inputRef}
             type="text"
             value={newMessage}
             onChange={handleMessageChange}
             placeholder="Type a message..."
-            className="flex-1 rounded-l border border-[var(--border)] bg-[var(--background)] p-3 text-[var(--text)] focus:outline-none"
+            className="flex-1 rounded border border-[var(--border)] bg-[var(--background)] p-3 text-[var(--text)] focus:outline-none"
             disabled={sending}
+            autoFocus
           />
           <button
             type="submit"
             disabled={!newMessage.trim() || sending}
-            className={`rounded-r p-3 flex items-center justify-center ${
+            className={`rounded p-3 flex items-center justify-center ${
               !newMessage.trim() || sending
-                ? "bg-[var(--surface)] text-[var(--text-secondary)]"
+                ? "bg-[var(--surface-hover)] text-[var(--text-secondary)]"
                 : "bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]"
             }`}
           >
