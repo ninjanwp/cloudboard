@@ -386,11 +386,21 @@ const Column = ({
 
   return (
     <div className="flex-grow w-56 shrink-0 px-2">
-      <div className="mb-1 flex items-center justify-start gap-2 rounded bg-[var(--surface)]">
-        <span className="rounded-l bg-[var(--surface)] font-mono px-3 py-2 text-[var(--accent)]">
-          {filteredCards.length}
-        </span>
-        <h3 className="font-bold text-[var(--text)]">{title}</h3>
+      <div className="mb-1 flex items-center justify-between gap-2 rounded bg-[var(--surface)]">
+        <div className="flex items-center">
+          <span className="rounded-l bg-[var(--surface)] font-mono px-3 py-2 text-[var(--accent)]">
+            {filteredCards.length}
+          </span>
+          <h3 className="font-bold text-[var(--text)]">{title}</h3>
+        </div>
+        {column === "backlog" && (
+          <AddCard
+            column={column}
+            cards={cards}
+            projectId={projectId}
+            boardId={boardId}
+          />
+        )}
       </div>
       <div
         onDrop={handleDragEnd}
@@ -422,12 +432,6 @@ const Column = ({
             />
           </React.Fragment>
         ))}
-        <AddCard
-          column={column}
-          cards={cards}
-          projectId={projectId}
-          boardId={boardId}
-        />
       </div>
     </div>
   );
@@ -1305,7 +1309,7 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
       <motion.button
         layout
         onClick={() => setIsModalOpen(true)}
-        className="flex w-full justify-center items-center gap-1.5 px-3 py-1.5 text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--text)] hover:bg-[var(--surface)] border border-[var(--surface)] rounded"
+        className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs btn-accent rounded"
       >
         <FiPlus />
         <span>Add Card</span>
