@@ -190,11 +190,11 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
     const now = new Date();
     const taskDate = task.date ? new Date(task.date + 'T00:00:00') : null;
     
-    if (task.column === 'done') return 'bg-green-600';
-    if (task.column === 'in-progress') return 'bg-blue-600';
-    if (taskDate && taskDate < now) return 'bg-orange-600'; // Overdue - changed from bright red to orange
-    if (task.assignment?.assignedTo) return 'bg-purple-600'; // Assigned
-    return 'bg-slate-600'; // Default - more neutral color
+    if (task.column === 'done') return 'border-l-green-600';
+    if (task.column === 'in-progress') return 'border-l-blue-600';
+    if (taskDate && taskDate < now) return 'border-l-orange-600'; // Overdue - changed from bright red to orange
+    if (task.assignment?.assignedTo) return 'border-l-purple-600'; // Assigned
+    return 'border-l-slate-600'; // Default - more neutral color
   };
 
   // Function to format date
@@ -253,7 +253,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                 <button
                   key={task.id}
                   onClick={() => router.push(`/projects/${projectId}/task/${task.id}?boardId=${boardId}`)}
-                  className={`w-full p-4 rounded-lg text-white text-left hover:opacity-95 hover:scale-[1.02] hover:shadow-xl hover:-translate-y-1 hover:ring-1 hover:ring-white/20 transition-all duration-200 ease-out cursor-pointer transform-gpu ${getTaskColor(task)}`}
+                  className={`w-full p-4 rounded-lg bg-[var(--surface)] text-[var(--text)] text-left hover:opacity-95 hover:shadow-xl hover:ring-1 hover:ring-white/20 transition-all duration-200 ease-out cursor-pointer transform-gpu border-l-4 ${getTaskColor(task)}`}
                   title={`${task.title}${task.assignment?.assignedTo ? ` (${userDisplayNames[task.assignment.assignedTo] || task.assignment.assignedTo})` : ''}${task.description ? `\n${task.description}` : ''}`}
                 >
                   <div className="flex justify-between items-start">
@@ -357,7 +357,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                     }}
                     onMouseEnter={() => setHoveredTask(task.id)}
                     onMouseLeave={() => setHoveredTask(null)}
-                    className={`w-full text-white p-2 rounded text-xs hover:opacity-95 hover:scale-[1.02] hover:shadow-lg hover:-translate-y-0.5 hover:ring-1 hover:ring-white/20 transition-all duration-200 ease-out cursor-pointer text-left transform-gpu ${getTaskColor(task)}`}
+                    className={`w-full bg-[var(--surface)] text-[var(--text)] p-2 rounded text-xs hover:opacity-95 hover:scale-[1.02] hover:shadow-lg hover:-translate-y-0.5 hover:ring-1 hover:ring-white/20 transition-all duration-200 ease-out cursor-pointer text-left transform-gpu border-l-2 ${getTaskColor(task)}`}
                     style={{ zIndex: taskIndex + 1 }}
                     title={`${task.title}${task.assignment?.assignedTo ? ` (${userDisplayNames[task.assignment.assignedTo] || task.assignment.assignedTo})` : ''}${task.description ? `\n${task.description}` : ''}`}
                     initial={{ opacity: 0, y: -10 }}
@@ -435,11 +435,11 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                 title="Click to view day"
                 onMouseEnter={() => setHoveredDay(dayKey)}
                 onMouseLeave={() => setHoveredDay(null)}
-                initial={{ opacity: 0, scale: 0.8 }}
+                initial={{ opacity: 0, scale: 1 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ 
                   duration: 0.25, 
-                  delay: index * 0.02,
+                  delay: index * 0.005,
                   ease: "easeOut"
                 }}
               >
@@ -470,7 +470,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                       }}
                       onMouseEnter={() => setHoveredTask(task.id)}
                       onMouseLeave={() => setHoveredTask(null)}
-                      className={`w-full text-white text-xs p-1 rounded truncate hover:opacity-95 hover:scale-[1.02] hover:shadow-lg hover:-translate-y-0.5 hover:ring-1 hover:ring-white/20 transition-all duration-200 ease-out cursor-pointer text-left transform-gpu ${getTaskColor(task)}`}
+                      className={`w-full bg-[var(--surface)] text-[var(--text)] text-xs p-1 rounded truncate hover:opacity-95 hover:scale-[1.02] hover:shadow-lg hover:-translate-y-0.5 hover:ring-1 hover:ring-white/20 transition-all duration-200 ease-out cursor-pointer text-left transform-gpu border-l-2 ${getTaskColor(task)}`}
                       title={`${task.title} (${task.column})${task.assignment?.assignedTo ? ` - ${userDisplayNames[task.assignment.assignedTo] || task.assignment.assignedTo}` : ''}${task.description ? `\n${task.description}` : ''}`}
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}

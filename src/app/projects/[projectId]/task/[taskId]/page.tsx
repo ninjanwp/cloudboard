@@ -68,6 +68,12 @@ export default function TaskPage() {
       return `${hours}h ${mins}m`;
     }
   };
+
+  // Auto-resize textarea function
+  const autoResizeTextarea = (element: HTMLTextAreaElement) => {
+    element.style.height = 'auto';
+    element.style.height = `${Math.max(120, element.scrollHeight)}px`;
+  };
   
   // Form state for editing
   const [editForm, setEditForm] = useState({
@@ -327,9 +333,9 @@ export default function TaskPage() {
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors px-3 py-2 rounded-lg hover:bg-[var(--surface)]"
+            className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors px-3 py-2 rounded-lg hover:bg-[var(--surface)] group"
           >
-            <FiArrowLeft className="w-5 h-5" />
+            <FiArrowLeft className="w-5 h-5 transition-transform group-hover:animate-pulse translate-x-1 group-hover:-translate-x-1 duration-200" />
             Back
           </button>
           
@@ -361,13 +367,13 @@ export default function TaskPage() {
                     onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
                     onBlur={() => handleFieldSave('title', editForm.title)}
                     onKeyDown={(e) => handleKeyDown(e, 'title', editForm.title)}
-                    className="w-full text-3xl font-bold bg-transparent border-b-2 border-[var(--accent)] focus:border-[var(--accent)] outline-none pb-3 text-[var(--text)]"
+                    className="w-full text-3xl leading-tight font-bold bg-transparent px-2 py-1 rounded border border-[var(--accent)] focus:border-[var(--accent)] outline-none text-[var(--text)]"
                     placeholder="Task title..."
                     autoFocus
                   />
                 ) : (
                   <h1 
-                    className="text-3xl font-bold text-[var(--text)] leading-tight cursor-pointer px-2 py-1 rounded hover:bg-[var(--background)] transition-all duration-200"
+                    className="text-3xl font-bold text-[var(--text)] leading-tight border border-transparent cursor-pointer px-2 py-1 rounded hover:bg-[var(--border)] transition-all duration-200"
                     onClick={() => handleFieldEdit('title')}
                     title="Click to edit title"
                   >
@@ -380,8 +386,16 @@ export default function TaskPage() {
               <div className="mb-6">
                 {editingField === 'description' ? (
                   <textarea
+                    ref={(el) => {
+                      if (el) {
+                        autoResizeTextarea(el);
+                      }
+                    }}
                     value={editForm.description}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) => {
+                      setEditForm(prev => ({ ...prev, description: e.target.value }));
+                      autoResizeTextarea(e.target);
+                    }}
                     onBlur={() => handleFieldSave('description', editForm.description)}
                     onKeyDown={(e) => {
                       if (e.key === 'Escape') {
@@ -396,13 +410,13 @@ export default function TaskPage() {
                         });
                       }
                     }}
-                    className="w-full min-h-[100px] bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 text-[var(--text)] focus:border-[var(--accent)] outline-none resize-y break-words"
+                    className="w-full min-h-[120px] bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 text-[var(--text)] focus:border-[var(--accent)] outline-none resize-none break-words overflow-hidden"
                     placeholder="Add a description..."
                     autoFocus
                   />
                 ) : (
                   <div 
-                    className="min-h-[50px] p-4 bg-[var(--surface)] border border-[var(--border)] rounded-lg cursor-pointer hover:bg-[var(--background)] transition-all duration-200"
+                    className="min-h-[120px] p-4 bg-[var(--surface)] border border-transparent rounded-lg cursor-pointer hover:bg-[var(--border)] transition-all duration-200"
                     onClick={() => handleFieldEdit('description')}
                     title="Click to edit description"
                   >

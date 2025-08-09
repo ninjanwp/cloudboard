@@ -9,7 +9,7 @@ import React, {
   FormEvent,
   useEffect,
 } from "react";
-import { FiPlus, FiCalendar } from "react-icons/fi";
+import { FiPlus, FiCalendar, FiClock, FiUser } from "react-icons/fi";
 import { motion } from "framer-motion";
 import { db } from "../../../firebase";
 import {
@@ -371,12 +371,12 @@ const Column = ({
 
   return (
     <div className="flex-grow w-56 shrink-0 px-2">
-      <div className="mb-1 flex items-center justify-between gap-2 rounded bg-[var(--surface)]">
-        <div className="flex items-center">
-          <span className="rounded-l bg-[var(--surface)] font-mono px-3 py-2 text-[var(--accent)]">
+      <div className="mb-3 flex items-center justify-between gap-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="rounded-lg bg-[var(--accent)] text-white font-mono px-2 py-1 text-sm font-bold min-w-[28px] text-center">
             {filteredCards.length}
           </span>
-          <h3 className="font-bold text-[var(--text)]">{title}</h3>
+          <h3 className="font-bold text-[var(--text)] text-lg">{title}</h3>
         </div>
         {column === "backlog" && (
           <AddCard
@@ -392,9 +392,9 @@ const Column = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={classNames(
-          "h-full w-full transition-colors rounded border",
+          "min-h-[400px] w-full transition-all duration-200 rounded-xl border-2 border-dashed p-3",
           active
-            ? "border-[var(--accent)]"
+            ? "border-[var(--accent)] bg-[var(--accent)]/5"
             : "border-transparent"
         )}
       >
@@ -554,20 +554,20 @@ const Card = ({ ...props }: CardProps) => {
             duration: props.duration,
           })
         }
-        className="cursor-grab rounded border border-[var(--surface)] bg-[var(--surface)] p-3 hover:border-[var(--accent)] hover:bg-[var(--background)] hover:scale-[1.02] hover:shadow-xl hover:-translate-y-1 hover:ring-1 hover:ring-[var(--accent)]/20 active:cursor-grabbing select-none transition-all duration-200 ease-out transform-gpu"
+        className="cursor-grab rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 mb-3 hover:border-[var(--accent)] hover:bg-[var(--background)] hover:scale-[1.02] hover:shadow-xl hover:-translate-y-1 hover:ring-1 hover:ring-[var(--accent)]/20 active:cursor-grabbing select-none transition-all duration-200 ease-out transform-gpu shadow-sm"
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-2 items-start justify-between">
-            <div className="flex items-center gap-2 flex-1 min-w-[60%]">
-              <FiCalendar className="flex-shrink-0 text-xl text-[var(--accent)]" />
-              <p className="text-xl font-bold text-[var(--text)] break-words">
+            <div className="flex items-start gap-3 flex-1 min-w-[60%]">
+              <FiCalendar className="flex-shrink-0 text-lg text-[var(--accent)] mt-0.5" />
+              <h3 className="text-lg font-bold text-[var(--text)] break-words leading-tight">
                 {props.title}
-              </p>
+              </h3>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {getDateInfo() && (
-                <span className="text-xs bg-[var(--accent)] text-white px-2 py-1 rounded">
-                  {getDateInfo()}
+                <span className="text-xs bg-[var(--accent)] text-white px-2 py-1 rounded-md font-medium">
+                  {props.date && formatDate(props.date)}
                 </span>
               )}
               <AgeBadge
@@ -578,13 +578,22 @@ const Card = ({ ...props }: CardProps) => {
           </div>
 
           {props.description && (
-            <p className="mt-2 line-clamp-5 text-xs text-[var(--text-secondary)] whitespace-pre-wrap break-words">
-              {props.description}
-            </p>
+            <div className="bg-[var(--background)] border border-[var(--border)] rounded-lg p-3">
+              <p className="text-sm text-[var(--text)] whitespace-pre-wrap break-words line-clamp-3">
+                {props.description}
+              </p>
+            </div>
+          )}
+
+          {props.duration && (
+            <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+              <FiClock className="w-4 h-4" />
+              <span>Duration: {Math.floor(props.duration / 60)}h {props.duration % 60}m</span>
+            </div>
           )}
 
           {props.links && props.links.length > 0 && (
-            <div className="mt-2 space-y-1 w-min">
+            <div className="space-y-2">
               {props.links.map((link, index) => (
                 <a
                   key={index}
@@ -592,37 +601,37 @@ const Card = ({ ...props }: CardProps) => {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:text-[var(--accent-hover)]"
+                  className="flex items-center gap-2 text-sm text-[var(--accent)] hover:text-[var(--accent-hover)] bg-[var(--background)] border border-[var(--border)] rounded-lg p-2 transition-colors"
                 >
-                  <FaLink className="text-[10px]" />
+                  <FaLink className="text-xs flex-shrink-0" />
                   <span className="truncate">{link.title || link.url}</span>
                 </a>
               ))}
             </div>
           )}
 
-          <div className="mt-2 flex items-center justify-between text-xs">
-            <div className="text-[var(--text-secondary)]">
-              {props.assignment?.assignedTo && (
-                <span className="font-bold">
-                  Assignee:{" "}
-                  <span className="text-[var(--accent)]">
-                    {userDisplayNames[props.assignment.assignedTo] ||
-                      props.assignment.assignedTo}
-                  </span>
+          {props.assignment?.assignedTo && (
+            <div className="flex items-center gap-2 bg-[var(--background)] border border-[var(--border)] rounded-lg p-3">
+              <FiUser className="w-4 h-4 text-[var(--accent)]" />
+              <div className="flex flex-col">
+                <span className="text-xs text-[var(--text-secondary)]">Assigned to</span>
+                <span className="text-sm font-medium text-[var(--text)]">
+                  {userDisplayNames[props.assignment.assignedTo] ||
+                    props.assignment.assignedTo}
                 </span>
-              )}
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="mt-2 text-xs w-full flex justify-between text-[var(--text-secondary)]">
-            <p>
-              Posted: <br /> {new Date(props.createdAt).toLocaleDateString()}
-            </p>
-            <p>
-              {props.lastModified ? "Updated: " : "Unchanged since: "} <br />
-              {getTimeAgo(props.lastModified, props.createdAt)}
-            </p>
+          <div className="flex justify-between text-xs text-[var(--text-secondary)] pt-2 border-t border-[var(--border)]">
+            <div className="flex flex-col">
+              <span>Created</span>
+              <span className="font-medium">{new Date(props.createdAt).toLocaleDateString()}</span>
+            </div>
+            <div className="flex flex-col text-right">
+              <span>{props.lastModified ? "Updated" : "Unchanged"}</span>
+              <span className="font-medium">{getTimeAgo(props.lastModified, props.createdAt)}</span>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -640,7 +649,7 @@ const DropIndicator = ({ beforeId, column }: DropIndicatorProps) => {
     <div
       data-before={beforeId || "-1"}
       data-column={column}
-      className="my-1 h-1 rounded w-full bg-[var(--accent)] opacity-0"
+      className="my-2 h-1 rounded-full w-full bg-[var(--accent)] opacity-0 transition-opacity duration-200 shadow-lg"
     />
   );
 };
@@ -746,62 +755,72 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
       <motion.button
         layout
         onClick={() => setIsModalOpen(true)}
-        className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs btn-accent rounded"
+        className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors font-medium shadow-sm"
       >
-        <FiPlus />
-        <span>Add Card</span>
+        <FiPlus className="w-4 h-4" />
+        <span>New Task</span>
       </motion.button>
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <form
           onSubmit={handleSubmit}
-          className="space-y-4 h-[80vh] pb-20 overflow-y-auto pr-9"
+          className="space-y-6 max-h-[80vh] overflow-y-auto"
         >
-          <div>
-            <div className="flex items-center gap-2 mb-8">
-              <FiCalendar className="text-4xl flex-shrink-0 text-[var(--accent)]" />
-              <h2 className="text-4xl font-bold text-neutral-100">
-                Add New Task
-              </h2>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <FiCalendar className="text-2xl text-[var(--accent)]" />
+              <h2 className="text-2xl font-bold text-[var(--text)]">Create New Task</h2>
             </div>
-            <label className="mb-1 block text-sm text-[var(--text-secondary)]">Title</label>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--text)] mb-2">
+              Task Title *
+            </label>
             <input
               type="text"
               value={text}
               onChange={(e) => setText(e.target.value)}
-              className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
-              placeholder="Enter title..."
+              className="w-full p-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text)] focus:border-[var(--accent)] outline-none transition-colors"
+              placeholder="Enter task title..."
               autoFocus
             />
           </div>
 
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <label className="mb-1 block text-sm text-[var(--text-secondary)]">Duration (minutes)</label>
-              <input
-                type="number"
-                value={duration}
-                onChange={(e) => setDuration(parseInt(e.target.value) || 60)}
-                min="15"
-                step="15"
-                className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
-              />
-            </div>
-          </div>
-
           <div>
-            <label className="mb-1 block text-sm text-[var(--text-secondary)]">
+            <label className="block text-sm font-medium text-[var(--text)] mb-2">
               Description
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
+              className="w-full p-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text)] focus:border-[var(--accent)] outline-none resize-y transition-colors"
+              placeholder="Enter task description..."
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm text-[var(--text-secondary)]">
+            <label className="block text-sm font-medium text-[var(--text)] mb-2">
+              Duration (minutes)
+            </label>
+            <select
+              value={duration}
+              onChange={(e) => setDuration(parseInt(e.target.value) || 60)}
+              className="w-full p-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text)] focus:border-[var(--accent)] outline-none transition-colors"
+            >
+              <option value={15}>15 min</option>
+              <option value={30}>30 min</option>
+              <option value={45}>45 min</option>
+              <option value={60}>1 hour</option>
+              <option value={90}>1.5 hours</option>
+              <option value={120}>2 hours</option>
+              <option value={180}>3 hours</option>
+              <option value={240}>4 hours</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--text)] mb-2">
               Assignment
             </label>
             <TaskAssignment
@@ -811,43 +830,43 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
               onUnassign={() => setAssignedMember(null)}
             />
           </div>
-          <div>
-            <label className="mb-1 block text-sm text-[var(--text-secondary)]">
-              Created by
-            </label>
-            <input
-              type="text"
-              value={user?.email || ""}
-              readOnly
-              className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text-secondary)] pointer-events-none"
-            />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--text)] mb-2">
+                Created by
+              </label>
+              <input
+                type="text"
+                value={user?.email || ""}
+                readOnly
+                className="w-full p-3 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--text-secondary)] cursor-not-allowed"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--text)] mb-2">
+                Created on
+              </label>
+              <input
+                type="text"
+                value={new Date().toLocaleDateString()}
+                readOnly
+                className="w-full p-3 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--text-secondary)] cursor-not-allowed"
+              />
+            </div>
           </div>
-          <div>
-            <label className="mb-1 block text-sm text-[var(--text-secondary)]">
-              Created on
-            </label>
-            <input
-              type="text"
-              value={
-                new Date().toLocaleDateString() +
-                " @ " +
-                new Date().toLocaleTimeString()
-              }
-              readOnly
-              className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text-secondary)] pointer-events-none"
-            />
-          </div>
-          <div className="flex justify-between h-18 absolute bottom-0 left-0 w-full p-4 rounded bg-[var(--surface)]">
+
+          <div className="flex gap-3 pt-4 border-t border-[var(--border)]">
             <button
               type="button"
               onClick={() => setIsModalOpen(false)}
-              className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text)]"
+              className="flex-1 px-4 py-3 border border-[var(--border)] text-[var(--text)] rounded-lg hover:bg-[var(--surface)] transition-colors font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="rounded bg-[var(--accent)] px-4 py-2 text-sm text-white hover:bg-[var(--accent-hover)]"
+              className="flex-1 px-4 py-3 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors font-medium"
             >
               Create Task
             </button>
@@ -881,10 +900,10 @@ const AgeBadge = ({
   };
 
   const age = getAge(lastModified, createdAt);
-  const bgColor = {
-    recent: "bg-green-500/20 text-green-400 border-green-500/30",
-    aging: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-    stale: "bg-red-500/20 text-red-400 border-red-500/30",
+  const styles = {
+    recent: "bg-green-500/10 text-green-600 border border-green-500/20",
+    aging: "bg-yellow-500/10 text-yellow-600 border border-yellow-500/20",
+    stale: "bg-red-500/10 text-red-600 border border-red-500/20",
   }[age];
 
   const label = {
@@ -894,7 +913,7 @@ const AgeBadge = ({
   }[age];
 
   return (
-    <span className={`text-xs px-2 py-1 rounded-full border ${bgColor}`}>
+    <span className={`text-xs px-2 py-1 rounded-md font-medium ${styles}`}>
       {label}
     </span>
   );
@@ -926,15 +945,15 @@ const TaskAssignment = ({
   }, [projectMembers]);
 
   return (
-    <div className="space-y-4 bg-[var(--surface)] p-1 rounded border border-[var(--border)]">
-      <div className="flex flex-col gap-2">
+    <div className="space-y-3 bg-[var(--surface)] p-4 rounded-lg border border-[var(--border)]">
+      <div className="flex flex-col gap-3">
         {projectMembers.map((member) => (
           <label
             key={member}
-            className={`flex items-center gap-2 p-2 rounded cursor-pointer ${
+            className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all duration-200 ${
               currentAssignee === member
-                ? "bg-[var(--accent)]/20 border border-[var(--accent)]"
-                : "border border-[var(--border)] hover:bg-[var(--surface-hover)] hover:border-[var(--border-hover)]"
+                ? "bg-[var(--accent)]/10 border-2 border-[var(--accent)] ring-1 ring-[var(--accent)]/20"
+                : "border-2 border-[var(--border)] hover:bg-[var(--background)] hover:border-[var(--accent)]/50"
             }`}
           >
             <input
@@ -942,21 +961,25 @@ const TaskAssignment = ({
               name="assignee"
               checked={currentAssignee === member}
               onChange={() => onAssign(member)}
-              className="hidden"
+              className="w-4 h-4 text-[var(--accent)] border-2 border-[var(--border)] focus:ring-[var(--accent)] focus:ring-2"
             />
-            <span className="text-[var(--text)]">
-              {userDisplayNames[member] || member}
-            </span>
-            {currentAssignee === member && (
-              <span className="ml-auto text-xs text-[var(--accent)]">Assigned</span>
-            )}
+            <div className="flex-1">
+              <span className="text-[var(--text)] font-medium">
+                {userDisplayNames[member] || member}
+              </span>
+              {currentAssignee === member && (
+                <span className="ml-2 text-xs text-[var(--accent)] font-medium bg-[var(--accent)]/10 px-2 py-1 rounded">
+                  Assigned
+                </span>
+              )}
+            </div>
           </label>
         ))}
       </div>
       {currentAssignee && (
         <button
           onClick={onUnassign}
-          className="w-full p-2 bg-red-500 rounded text-white hover:bg-red-600"
+          className="w-full p-3 bg-red-500/10 border-2 border-red-500/30 rounded-lg text-red-600 hover:bg-red-500/20 hover:border-red-500/50 transition-all duration-200 font-medium"
         >
           Unassign Task
         </button>
