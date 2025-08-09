@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useProject } from "../context/ProjectContext";
 import { motion } from "framer-motion";
-import { FaClipboardList, FaGear, FaMessage } from "react-icons/fa6";
+import { FaClipboardList, FaGear, FaMessage, FaCalendar } from "react-icons/fa6";
 
 export const ProjectNav = () => {
   const { currentProject } = useProject();
@@ -21,6 +21,11 @@ export const ProjectNav = () => {
       href: `/projects/${projectId}`,
       label: "Board",
       icon: <FaClipboardList className="w-4 h-4" />,
+    },
+    {
+      href: `/projects/${projectId}/calendar`,
+      label: "Calendar",
+      icon: <FaCalendar className="w-4 h-4" />,
     },
     {
       href: `/projects/${projectId}/chat`,

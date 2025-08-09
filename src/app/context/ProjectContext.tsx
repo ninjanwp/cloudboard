@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { doc, onSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "../../../firebase";
+import { usePathname } from "next/navigation";
 
 export type Project = {
   id: string;
@@ -31,6 +32,15 @@ const ProjectContext = createContext<ProjectContextType>({
 export const ProjectProvider = ({ children }: { children: React.ReactNode }) => {
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const pathname = usePathname();
+
+  // Auto-detect project ID from URL on mount and route changes
+  useEffect(() => {
+    const pathSegments = pathname.split('/');
+    if (pathSegments[1] === 'projects' && pathSegments[2] && pathSegments[2] !== selectedProjectId) {
+      setSelectedProjectId(pathSegments[2]);
+    }
+  }, [pathname, selectedProjectId]);
 
   useEffect(() => {
     if (!selectedProjectId) {

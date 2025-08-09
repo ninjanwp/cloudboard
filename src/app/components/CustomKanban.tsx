@@ -9,7 +9,7 @@ import React, {
   FormEvent,
   useEffect,
 } from "react";
-import { FiPlus, FiTrash } from "react-icons/fi";
+import { FiPlus, FiCalendar } from "react-icons/fi";
 import { motion } from "framer-motion";
 import { db } from "../../../firebase";
 import {
@@ -22,12 +22,10 @@ import {
 } from "firebase/firestore";
 import { Modal } from "./Modal";
 import { useAuth } from "../context/AuthContext";
-import { Badge } from "./Badge"; // We'll create this component
 import classNames from "classnames";
-import * as FaIcons from "react-icons/fa6";
+import { FaLink } from "react-icons/fa6";
 import { getUserDisplayName } from "../utils/userUtils";
 import { createLog } from "../utils/logUtils";
-import { SizeIndicator } from "./SizeIndicator"; // Update import
 
 const GridBackground = () => (
   <motion.div
@@ -114,11 +112,7 @@ const Board = ({
     const unsubscribe = onSnapshot(cardsRef, (snapshot) => {
       const cardsData: CardType[] = [];
       snapshot.forEach((doc) => {
-        // Add default taskType if it doesn't exist
         const data = doc.data();
-        if (!data.taskType) {
-          data.taskType = "task"; // Set default value
-        }
         cardsData.push({ id: doc.id, ...data } as CardType);
       });
       setCards(cardsData);
@@ -367,20 +361,11 @@ const Column = ({
     setActive(false);
   };
 
-  // Sort filtered cards by priority and order
+  // Sort filtered cards by order only
   const filteredCards = cards
     .filter((c) => c.column === column)
     .sort((a, b) => {
-      // First sort by priority
-      const priorityOrder = { high: 0, medium: 1, low: 2 };
-      const aPriority = a.priority ? priorityOrder[a.priority] : 3; // Cards without priority go last
-      const bPriority = b.priority ? priorityOrder[b.priority] : 3;
-
-      if (aPriority !== bPriority) {
-        return aPriority - bPriority;
-      }
-
-      // If priorities are equal, sort by order
+      // Sort by order only
       return (a.order || 0) - (b.order || 0);
     });
 
@@ -425,6 +410,7 @@ const Column = ({
               updateCard={updateCard}
               deleteCard={deleteCard}
               projectId={projectId}
+              boardId={boardId}
             />
             <DropIndicator
               beforeId={filteredCards[index + 1]?.id || null}
@@ -442,6 +428,7 @@ type CardProps = CardType & {
   updateCard: (cardId: string, data: Partial<CardType>) => Promise<void>;
   deleteCard: (cardId: string) => Promise<void>;
   projectId: string;
+  boardId: string;
 };
 
 // Add this utility function before the Card component
@@ -467,44 +454,13 @@ const getTimeAgo = (lastModified: string | undefined, createdAt: string) => {
   return `${diffDays} days ago`;
 };
 
-// Add this utility function to get task icon component
-const getTaskIcon = (taskType: TaskType) => {
-  switch (taskType) {
-    case "bug":
-      return FaIcons.FaBug;
-    case "feature":
-      return FaIcons.FaStar;
-    case "task":
-    default:
-      return FaIcons.FaSquareCheck;
-  }
-};
-
-// Add this utility function near the other utility functions
-const getPriorityColor = (priority: Priority) => {
-  switch (priority) {
-    case "high":
-      return "text-red-400";
-    case "medium":
-      return "text-yellow-400";
-    case "low":
-      return "text-blue-400";
-    default:
-      return "text-neutral-400";
-  }
-};
-
 // Add these types near your other type definitions
-type Size = "S" | "M" | "L" | "XL";
-
 type CardType = {
   title: string;
   id: string;
   column: ColumnType;
   createdAt: string;
   description?: string;
-  priority: Priority;
-  taskType: TaskType; // Add this instead of icon
   createdBy: {
     uid: string;
     email: string;
@@ -516,13 +472,15 @@ type CardType = {
     assignedTo: string | null;
     assignedAt: string;
   };
-  size: Size;
+  // Date-focused fields
+  date?: string;
+  duration?: number; // in minutes
 };
 
 const Card = ({ ...props }: CardProps) => {
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
   const router = useRouter();
-  const IconComponent = getTaskIcon(props.taskType);
+  
   useEffect(() => {
     const fetchProjectMembers = async () => {
       try {
@@ -541,11 +499,11 @@ const Card = ({ ...props }: CardProps) => {
     };
     fetchProjectMembers();
   }, [props.projectId, router]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  
   const [userDisplayNames, setUserDisplayNames] = useState<{
     [email: string]: string;
   }>({});
+  
   useEffect(() => {
     const loadDisplayNames = async () => {
       const names: { [email: string]: string } = {};
@@ -558,8 +516,24 @@ const Card = ({ ...props }: CardProps) => {
   }, [projectMembers]);
 
   const handleCardClick = () => {
-    setIsEditing(false);
-    setIsModalOpen(true);
+    router.push(`/projects/${props.projectId}/task/${props.id}?boardId=${props.boardId}`);
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const getDateInfo = () => {
+    if (props.date) {
+      return `Date: ${formatDate(props.date)}`;
+    }
+    return null;
   };
 
   return (
@@ -575,29 +549,27 @@ const Card = ({ ...props }: CardProps) => {
             id: props.id,
             column: props.column,
             createdAt: props.createdAt,
-            taskType: props.taskType,
             createdBy: props.createdBy,
-            priority: props.priority,
-            size: props.size,
+            date: props.date,
+            duration: props.duration,
           })
         }
-        className="cursor-grab rounded border border-[var(--surface)] bg-[var(--surface)] p-3 hover:border-[var(--accent)] active:cursor-grabbing select-none transition-colors"
+        className="cursor-grab rounded border border-[var(--surface)] bg-[var(--surface)] p-3 hover:border-[var(--accent)] hover:bg-[var(--background)] hover:scale-[1.02] hover:shadow-xl hover:-translate-y-1 hover:ring-1 hover:ring-[var(--accent)]/20 active:cursor-grabbing select-none transition-all duration-200 ease-out transform-gpu"
       >
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap gap-2 items-start justify-between">
             <div className="flex items-center gap-2 flex-1 min-w-[60%]">
-              <IconComponent
-                className={`flex-shrink-0 text-xl ${getPriorityColor(
-                  props.priority
-                )}`}
-              />
+              <FiCalendar className="flex-shrink-0 text-xl text-[var(--accent)]" />
               <p className="text-xl font-bold text-[var(--text)] break-words">
                 {props.title}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <SizeIndicator size={props.size} style="boxes" />
-              {props.priority && <Badge priority={props.priority} />}
+              {getDateInfo() && (
+                <span className="text-xs bg-[var(--accent)] text-white px-2 py-1 rounded">
+                  {getDateInfo()}
+                </span>
+              )}
               <AgeBadge
                 lastModified={props.lastModified}
                 createdAt={props.createdAt}
@@ -622,7 +594,7 @@ const Card = ({ ...props }: CardProps) => {
                   onClick={(e) => e.stopPropagation()}
                   className="flex items-center gap-1.5 text-xs text-[var(--accent)] hover:text-[var(--accent-hover)]"
                 >
-                  <FaIcons.FaLink className="text-[10px]" />
+                  <FaLink className="text-[10px]" />
                   <span className="truncate">{link.title || link.url}</span>
                 </a>
               ))}
@@ -633,7 +605,7 @@ const Card = ({ ...props }: CardProps) => {
             <div className="text-[var(--text-secondary)]">
               {props.assignment?.assignedTo && (
                 <span className="font-bold">
-                  Assigned to:{" "}
+                  Assignee:{" "}
                   <span className="text-[var(--accent)]">
                     {userDisplayNames[props.assignment.assignedTo] ||
                       props.assignment.assignedTo}
@@ -654,538 +626,7 @@ const Card = ({ ...props }: CardProps) => {
           </div>
         </div>
       </motion.div>
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        {isEditing ? (
-          <CardEdit
-            card={{
-              title: props.title,
-              id: props.id,
-              column: props.column,
-              description: props.description,
-              createdBy: props.createdBy,
-              createdAt: props.createdAt,
-              priority: props.priority,
-              taskType: props.taskType,
-              links: props.links,
-              assignment: props.assignment,
-              size: props.size,
-            }}
-            onClose={() => {
-              setIsEditing(false);
-              setIsModalOpen(false);
-            }}
-            updateCard={props.updateCard}
-            deleteCard={props.deleteCard}
-            projectId={props.projectId} // Add this
-          />
-        ) : (
-          <CardOverview
-            card={{
-              title: props.title,
-              id: props.id,
-              column: props.column,
-              description: props.description,
-              createdBy: props.createdBy,
-              createdAt: props.createdAt,
-              priority: props.priority,
-              taskType: props.taskType,
-              links: props.links,
-              assignment: props.assignment,
-              size: props.size,
-            }}
-            onEdit={() => setIsEditing(true)}
-            updateCard={props.updateCard}
-            projectId={props.projectId}
-          />
-        )}
-      </Modal>
     </>
-  );
-};
-
-type CardOverviewProps = {
-  card: CardType;
-  onEdit: () => void;
-  updateCard: (cardId: string, data: Partial<CardType>) => Promise<void>;
-  projectId: string;
-};
-
-const CardOverview = ({
-  card,
-  onEdit,
-  updateCard,
-  projectId,
-}: CardOverviewProps) => {
-  const { user } = useAuth();
-  const IconComponent = getTaskIcon(card.taskType);
-
-  return (
-    <div className="space-y-8 p-4">
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <IconComponent
-            className={`text-4xl flex-shrink-0 ${getPriorityColor(card.priority)}`}
-          />
-          <h2 className="text-4xl font-bold text-[var(--text)] break-words">
-            {card.title}
-          </h2>
-        </div>
-        <button
-          onClick={onEdit}
-          className="w-full p-2 rounded border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface-hover)] transition-colors"
-        >
-          <span className="flex items-center justify-center gap-1.5">
-            <FaIcons.FaPen />
-            Edit Item
-          </span>
-        </button>
-      </div>
-
-      <div className="flex items-start justify-start gap-4">
-        <div className="flex flex-col gap-1">
-          <label className="block text-sm text-[var(--text-secondary)] mb-1">Size</label>
-          <SizeIndicator size={card.size} style="boxes" />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="block text-sm text-[var(--text-secondary)] mb-1">
-            Priority
-          </label>
-          <Badge priority={card.priority} />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label className="block text-sm text-[var(--text-secondary)] mb-1">Status</label>
-          <AgeBadge
-            lastModified={card.lastModified}
-            createdAt={card.createdAt}
-          />
-        </div>
-      </div>
-
-      {card.description && (
-        <div className="border-t border-neutral-700 pt-4">
-          <label className="block text-sm text-[var(--text-secondary)] mb-2">
-            Description
-          </label>
-          <p className="text-sm font-medium text-[var(--text)] whitespace-pre-wrap break-words">
-            {card.description}
-          </p>
-        </div>
-      )}
-
-      {card.links && card.links.length > 0 && (
-        <div className="border-t border-neutral-700 pt-4">
-          <label className="block text-sm text-[var(--text-secondary)] mb-2">Links</label>
-          <div className="space-y-2">
-            {card.links.map((link, index) => (
-              <a
-                key={index}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-sm text-[var(--accent)] hover:text-[var(--accent-hover)]"
-              >
-                <FaIcons.FaLink className="text-xs" />
-                <span>{link.title || link.url}</span>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="border-t border-neutral-700 pt-4">
-        <label className="block text-sm text-[var(--text-secondary)] mb-2">
-          Assignment
-        </label>
-        <TaskAssignmentOverview
-          currentAssignee={card.assignment?.assignedTo || null}
-          onAssign={async (email) => {
-            await updateCard(card.id, {
-              assignment: {
-                assignedTo: email,
-                assignedAt: new Date().toISOString(),
-              },
-            });
-
-            await createLog(
-              projectId,
-              "assignment",
-              "took a task",
-              `${email} took "${card.title}"`,
-              user?.email || "unknown"
-            );
-          }}
-          onUnassign={async () => {
-            await updateCard(card.id, {
-              assignment: {
-                assignedTo: null,
-                assignedAt: new Date().toISOString(),
-              },
-            });
-
-            await createLog(
-              projectId,
-              "assignment",
-              "abandoned a task",
-              `Abandoned "${card.title}"`,
-              user?.email || "unknown"
-            );
-          }}
-          currentUserEmail={user?.email || null}
-        />
-      </div>
-
-      <div className="text-xs text-neutral-500 space-y-1">
-        <p>Created by: {card.createdBy.email}</p>
-        <p>
-          Created on: {new Date(card.createdAt).toLocaleDateString()} @{" "}
-          {new Date(card.createdAt).toLocaleTimeString()}
-        </p>
-        {card.lastModified && (
-          <p>
-            Last modified: {new Date(card.lastModified).toLocaleDateString()} @{" "}
-            {new Date(card.lastModified).toLocaleTimeString()}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Update CardEditProps interface to include projectId
-interface CardEditProps {
-  card: CardType;
-  onClose: () => void;
-  updateCard: (cardId: string, data: Partial<CardType>) => Promise<void>;
-  deleteCard: (cardId: string) => Promise<void>;
-  projectId: string; // Add this
-}
-
-const CardEdit = ({
-  card,
-  onClose,
-  updateCard,
-  deleteCard,
-  projectId,
-}: CardEditProps) => {
-  const [title, setTitle] = useState(card.title);
-  const [description, setDescription] = useState(card.description || "");
-  const [priority, setPriority] = useState<Priority>(card.priority || "low"); // Default to low if not set
-  const [taskType, setTaskType] = useState<TaskType>(card.taskType || "task"); // Add default here too
-  const [links, setLinks] = useState<{ url: string; title: string }[]>(
-    card.links || []
-  );
-  const [newLinkUrl, setNewLinkUrl] = useState("");
-  const [newLinkTitle, setNewLinkTitle] = useState("");
-  const { user } = useAuth();
-  const [projectMembers, setProjectMembers] = useState<string[]>([]);
-  const [assignedMember, setAssignedMember] = useState<string>(
-    card.assignment?.assignedTo || ""
-  );
-  const [size, setSize] = useState<Size>(card.size || "M");
-
-  useEffect(() => {
-    const fetchProjectMembers = async () => {
-      const projectRef = doc(db, "projects", projectId);
-      const projectSnap = await getDoc(projectRef);
-      if (projectSnap.exists()) {
-        setProjectMembers(projectSnap.data().members || []);
-      }
-    };
-    fetchProjectMembers();
-  }, [projectId]);
-
-  const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this card?")) {
-      await createLog(
-        projectId,
-        "task",
-        "deleted a task",
-        `Deleted "${card.title}"`,
-        user?.email || "unknown"
-      );
-      await deleteCard(card.id);
-      onClose();
-    }
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-
-    const changes: string[] = [];
-    if (title !== card.title)
-      changes.push(`title from "${card.title}" to "${title}"`);
-    if (description !== (card.description || "")) changes.push("description");
-    if (priority !== card.priority) changes.push("priority");
-    if (taskType !== (card.taskType || "task")) changes.push("task type"); // Add default here too
-    if (size !== card.size) changes.push("size");
-
-    // Log all changes if any were made
-    if (changes.length > 0) {
-      await createLog(
-        projectId,
-        "task",
-        "edited a task",
-        `Modified ${card.title}: changed ${changes.join(", ")}`,
-        user?.email || "unknown"
-      );
-    }
-
-    const assignmentChanged =
-      assignedMember !== (card.assignment?.assignedTo || "");
-    const updatedCard: Partial<CardType> = {
-      title,
-      description,
-      taskType: taskType || "task", // Ensure taskType is never undefined
-      links,
-      priority, // Always included now
-      lastModified: new Date().toISOString(),
-      assignment: assignedMember
-        ? {
-            assignedTo: assignedMember,
-            assignedAt: new Date().toISOString(),
-          }
-        : {
-            assignedTo: null,
-            assignedAt: new Date().toISOString(),
-          },
-      size,
-    };
-
-    await updateCard(card.id, updatedCard);
-
-    // Log assignment changes if any
-    if (assignmentChanged) {
-      if (assignedMember) {
-        await createLog(
-          projectId,
-          "assignment",
-          "assigned a task",
-          `Assigned "${title}" to ${assignedMember}`,
-          user?.email || "unknown"
-        );
-      } else {
-        await createLog(
-          projectId,
-          "assignment",
-          "unassigned a task",
-          `Removed assignment from "${title}"`,
-          user?.email || "unknown"
-        );
-      }
-    }
-
-    onClose();
-  };
-
-  const addLink = () => {
-    if (!newLinkUrl) return;
-    try {
-      new URL(newLinkUrl); // Validate URL
-      setLinks([
-        ...links,
-        { url: newLinkUrl, title: newLinkTitle || newLinkUrl },
-      ]);
-      setNewLinkUrl("");
-      setNewLinkTitle("");
-    } catch {
-      alert("Please enter a valid URL");
-    }
-  };
-
-  const removeLink = (index: number) => {
-    setLinks(links.filter((_, i) => i !== index));
-  };
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 h-[80vh] pb-20 overflow-y-auto pr-9"
-    >
-      <div>
-        <label className="mb-1 block text-sm text-[var(--text-secondary)]">Title</label>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm text-[var(--text-secondary)]">Type</label>
-        <select
-          value={taskType}
-          onChange={(e) => setTaskType(e.target.value as TaskType)}
-          className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
-        >
-          <option value="task">Task (Simple, 1-2 hours)</option>
-          <option value="bug">Bug</option>
-          <option value="feature">Feature (Complex)</option>
-        </select>
-      </div>
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <label className="mb-1 block text-sm text-[var(--text-secondary)]">Size</label>
-          <select
-            value={size}
-            onChange={(e) => setSize(e.target.value as Size)}
-            className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
-          >
-            <option value="S">Small</option>
-            <option value="M">Medium</option>
-            <option value="L">Large</option>
-            <option value="XL">Extra Large</option>
-          </select>
-        </div>
-        <div className="flex-1">
-          <label className="mb-1 block text-sm text-[var(--text-secondary)]">
-            Priority
-          </label>
-          <select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value as Priority)}
-            className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-        </div>
-      </div>
-      <div>
-        <label className="mb-1 block text-sm text-[var(--text-secondary)]">
-          Description
-        </label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={7}
-          className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm text-[var(--text-secondary)]">Links</label>
-        <div className="space-y-2">
-          {links.map((link, index) => (
-            <div key={index} className="flex items-center gap-2">
-              <input
-                type="text"
-                value={link.title}
-                onChange={(e) => {
-                  const newLinks = [...links];
-                  newLinks[index].title = e.target.value;
-                  setLinks(newLinks);
-                }}
-                className="flex-1 rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)] text-sm"
-                placeholder="Link title"
-              />
-              <input
-                type="url"
-                value={link.url}
-                onChange={(e) => {
-                  const newLinks = [...links];
-                  newLinks[index].url = e.target.value;
-                  setLinks(newLinks);
-                }}
-                className="flex-1 rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)] text-sm"
-                placeholder="https://..."
-              />
-              <button
-                type="button"
-                onClick={() => removeLink(index)}
-                className="text-red-400 hover:text-red-300"
-              >
-                <FiTrash />
-              </button>
-            </div>
-          ))}
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={newLinkTitle}
-              onChange={(e) => setNewLinkTitle(e.target.value)}
-              className="flex-1 rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)] text-sm"
-              placeholder="Link title"
-            />
-            <input
-              type="url"
-              value={newLinkUrl}
-              onChange={(e) => setNewLinkUrl(e.target.value)}
-              className="flex-1 rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)] text-sm"
-              placeholder="https://..."
-            />
-            <button
-              type="button"
-              onClick={addLink}
-              className="text-blue-400 hover:text-blue-300"
-            >
-              <FiPlus />
-            </button>
-          </div>
-        </div>
-      </div>
-      <div>
-        <label className="mb-1 block text-sm text-[var(--text-secondary)]">
-          Assignment
-        </label>
-        <TaskAssignment
-          currentAssignee={assignedMember}
-          projectMembers={projectMembers}
-          onAssign={(email) => setAssignedMember(email)}
-          onUnassign={() => setAssignedMember("")}
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm text-[var(--text-secondary)]">
-          Created by
-        </label>
-        <input
-          type="text"
-          value={card.createdBy.email}
-          readOnly
-          className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text-secondary)] pointer-events-none"
-        />
-      </div>
-      <div>
-        <label className="mb-1 block text-sm text-[var(--text-secondary)]">
-          Created on
-        </label>
-        <input
-          type="text"
-          value={
-            new Date(card.createdAt).toLocaleDateString() +
-            " @ " +
-            new Date(card.createdAt).toLocaleTimeString()
-          }
-          readOnly
-          className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text-secondary)] pointer-events-none"
-        />
-      </div>
-      <div className="flex justify-between h-18 absolute bottom-0 left-0 w-full p-4 rounded bg-[var(--surface)]">
-        <button
-          type="button"
-          onClick={handleDelete}
-          className="rounded flex justify-center items-center gap-1.5 py-2 text-sm text-red-400 hover:text-red-300"
-        >
-          <FiTrash />
-          <span>Delete</span>
-        </button>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text)]"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="rounded bg-[var(--accent)] px-4 py-2 text-sm text-white hover:bg-[var(--accent-hover)]"
-          >
-            Save Changes
-          </button>
-        </div>
-      </div>
-    </form>
   );
 };
 
@@ -1215,12 +656,10 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [text, setText] = useState("");
   const [description, setDescription] = useState("");
-  const [taskType, setTaskType] = useState<TaskType>("task");
-  const [priority, setPriority] = useState<Priority>("low"); // Changed to always have a priority
+  const [duration, setDuration] = useState(60);
   const { user } = useAuth();
   const [assignedMember, setAssignedMember] = useState<string | null>(null);
   const [projectMembers, setProjectMembers] = useState<string[]>([]);
-  const [size, setSize] = useState<Size>("M");
 
   useEffect(() => {
     const fetchProjectMembers = async () => {
@@ -1255,7 +694,6 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
       column,
       title: text.trim(),
       description: description.trim(),
-      taskType,
       id: newCardId,
       createdAt: new Date().toISOString(),
       createdBy: {
@@ -1263,12 +701,11 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
         email: user.email || "",
       },
       order: newOrder,
-      priority: priority, // Always included now
+      duration,
       assignment: {
         assignedTo: assignedMember,
         assignedAt: new Date().toISOString(),
       },
-      size,
     };
 
     try {
@@ -1298,7 +735,7 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
       setIsModalOpen(false);
       setText("");
       setDescription("");
-      setPriority("low");
+      setDuration(60);
     } catch (error) {
       console.error("Error adding card:", error);
     }
@@ -1321,13 +758,9 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
         >
           <div>
             <div className="flex items-center gap-2 mb-8">
-              {getTaskIcon(taskType)({
-                className: `text-4xl flex-shrink-0 ${getPriorityColor(
-                  priority
-                )}`,
-              })}
+              <FiCalendar className="text-4xl flex-shrink-0 text-[var(--accent)]" />
               <h2 className="text-4xl font-bold text-neutral-100">
-                Add New Item
+                Add New Task
               </h2>
             </div>
             <label className="mb-1 block text-sm text-[var(--text-secondary)]">Title</label>
@@ -1340,50 +773,21 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
               autoFocus
             />
           </div>
-          {/* Rest of the form fields remain the same, just updating the className structure to match CardEdit */}
-          <div>
-            <label className="mb-1 block text-sm text-[var(--text-secondary)]">Type</label>
-            <select
-              value={taskType}
-              onChange={(e) => setTaskType(e.target.value as TaskType)}
-              className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
-            >
-              <option value="task">Task (Simple, 1-2 hours)</option>
-              <option value="bug">Bug</option>
-              <option value="feature">Feature (Complex)</option>
-            </select>
-          </div>
+
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="mb-1 block text-sm text-[var(--text-secondary)]">
-                Size
-              </label>
-              <select
-                value={size}
-                onChange={(e) => setSize(e.target.value as Size)}
+              <label className="mb-1 block text-sm text-[var(--text-secondary)]">Duration (minutes)</label>
+              <input
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(parseInt(e.target.value) || 60)}
+                min="15"
+                step="15"
                 className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
-              >
-                <option value="S">Small</option>
-                <option value="M">Medium</option>
-                <option value="L">Large</option>
-                <option value="XL">Extra Large</option>
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="mb-1 block text-sm text-[var(--text-secondary)]">
-                Priority
-              </label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as Priority)}
-                className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
+              />
             </div>
           </div>
+
           <div>
             <label className="mb-1 block text-sm text-[var(--text-secondary)]">
               Description
@@ -1395,12 +799,13 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
               className="w-full rounded border border-[var(--surface)] bg-[var(--background)] p-2 text-[var(--text)]"
             />
           </div>
+
           <div>
             <label className="mb-1 block text-sm text-[var(--text-secondary)]">
               Assignment
             </label>
             <TaskAssignment
-              currentAssignee={assignedMember}
+              currentAssignee={assignedMember || ""}
               projectMembers={projectMembers}
               onAssign={(email) => setAssignedMember(email)}
               onUnassign={() => setAssignedMember(null)}
@@ -1454,8 +859,6 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
 };
 
 type ColumnType = "backlog" | "todo" | "doing" | "done";
-type TaskType = "task" | "bug" | "feature";
-type Priority = "low" | "medium" | "high";
 type Age = "recent" | "aging" | "stale";
 
 // Add this new component after the Badge component
@@ -1559,60 +962,5 @@ const TaskAssignment = ({
         </button>
       )}
     </div>
-  );
-};
-
-// Add a new component for the overview-specific assignment display
-const TaskAssignmentOverview = ({
-  currentAssignee,
-  onAssign,
-  onUnassign,
-  currentUserEmail,
-}: {
-  currentAssignee: string | null;
-  onAssign: (email: string) => void;
-  onUnassign: () => void;
-  currentUserEmail: string | null;
-}) => {
-  const [assigneeName, setAssigneeName] = useState<string>("");
-
-  useEffect(() => {
-    const loadDisplayName = async () => {
-      if (currentAssignee) {
-        const name = await getUserDisplayName(currentAssignee);
-        setAssigneeName(name);
-      }
-    };
-    loadDisplayName();
-  }, [currentAssignee]);
-
-  if (currentAssignee) {
-    return (
-      <div className="flex flex-col gap-2">
-        <div className="p-2 rounded bg-[var(--accent)]/20 border border-[var(--accent)]">
-          <div className="flex justify-between items-center">
-            <span className="text-[var(--text)]">{assigneeName}</span>
-            <span className="text-xs text-[var(--accent)]">Assigned</span>
-          </div>
-        </div>
-        {currentAssignee === currentUserEmail && (
-          <button
-            onClick={onUnassign}
-            className="w-full p-2 bg-red-500 rounded text-white hover:bg-red-600"
-          >
-            Abandon Task
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <button
-      onClick={() => currentUserEmail && onAssign(currentUserEmail)}
-      className="w-full p-2 bg-blue-500 rounded text-white hover:bg-blue-600"
-    >
-      Take Task
-    </button>
   );
 };

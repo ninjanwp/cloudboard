@@ -79,9 +79,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);  // Add this
   const [invitations, setInvitations] = useState<ProjectInvitation[]>([]);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();  // Add this
 
   useEffect(() => {
+    setMounted(true);
     const unsubscribe = auth.onAuthStateChanged((user) => {
       setUser(user);
       setLoading(false);  // Add this
@@ -334,7 +336,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     <AuthContext.Provider
       value={{
         user,
-        loading,  // Add this
+        loading: loading || !mounted,  // Include mounted state
         signInWithGoogle,
         signInWithEmailPassword,
         signUpWithEmailPassword,

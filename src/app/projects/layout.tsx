@@ -8,6 +8,7 @@ import { MobileProjectNav } from "../components/MobileProjectNav";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/navigation";
 import { FiMenu } from "react-icons/fi";
+import { LoadingScreen } from "../components/LoadingScreen";
 import { ContentContainer } from "../components/ContentContainer";
 
 export default function ProjectsLayout({
@@ -15,9 +16,9 @@ export default function ProjectsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
   const [isMobile, setIsMobile] = useState(false);
 
@@ -36,10 +37,14 @@ export default function ProjectsLayout({
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (!loading && !user) {
       router.replace('/');
     }
-  }, [user, router]);
+  }, [user, loading, router]);
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   if (!user) {
     return null; // Or loading spinner

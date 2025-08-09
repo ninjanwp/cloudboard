@@ -3,7 +3,7 @@
 import { useProject } from "../context/ProjectContext";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { FaClipboardList, FaGear, FaMessage } from "react-icons/fa6";
+import { FaClipboardList, FaGear, FaMessage, FaCalendar } from "react-icons/fa6";
 import { motion } from "framer-motion";
 
 export const MobileProjectNav = () => {
@@ -20,6 +20,11 @@ export const MobileProjectNav = () => {
       href: `/projects/${projectId}`,
       icon: <FaClipboardList size={20} />,
       label: "Board",
+    },
+    {
+      href: `/projects/${projectId}/calendar`,
+      icon: <FaCalendar size={20} />,
+      label: "Calendar",
     },
     {
       href: `/projects/${projectId}/chat`,
