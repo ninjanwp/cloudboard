@@ -322,7 +322,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="grid grid-cols-7 border-b border-[var(--border)]">
-          {weekDays.map((day, _) => {
+          {weekDays.map((day) => {
             const dayKey = day.toISOString();
             const isHovered = hoveredDay === dayKey;
             const isToday = day.toDateString() === new Date().toDateString();
