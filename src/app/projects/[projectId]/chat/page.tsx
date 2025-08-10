@@ -13,17 +13,14 @@ import {
   serverTimestamp,
   doc,
   getDoc,
-  getDocs,
   setDoc,
   deleteDoc,
-  where,
   Timestamp,
 } from "firebase/firestore";
 import { FaPaperPlane, FaSpinner } from "react-icons/fa6"; // Remove FaUser
 import { getUserDisplayName } from "../../../utils/userUtils";
 import { createLog } from "../../../utils/logUtils";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import { UserAvatar } from "../../../components/UserAvatar";
 
 // Types defined as before

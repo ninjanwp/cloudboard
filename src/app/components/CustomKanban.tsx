@@ -9,7 +9,7 @@ import React, {
   FormEvent,
   useEffect,
 } from "react";
-import { FiPlus, FiCalendar, FiClock, FiUser } from "react-icons/fi";
+import { FiPlus, FiCalendar, FiClock } from "react-icons/fi";
 import { motion } from "framer-motion";
 import { db } from "../../../firebase";
 import {

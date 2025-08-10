@@ -7,7 +7,7 @@ import { FiChevronLeft, FiChevronRight, FiCalendar, FiClock, FiPlus, FiX } from 
 import { collection, onSnapshot, addDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { useAuth } from "../context/AuthContext";
-import { getUserDisplayName, getUserPhotoURL } from "../utils/userUtils";
+import { getUserDisplayName } from "../utils/userUtils";
 import { UserAvatar } from "./UserAvatar";
 
 type CalendarTask = {
@@ -36,11 +36,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
-  const [hoveredTask, setHoveredTask] = useState<string | null>(null);
   const [userDisplayNames, setUserDisplayNames] = useState<{
-    [email: string]: string;
-  }>({});
-  const [userPhotoURLs, setUserPhotoURLs] = useState<{
     [email: string]: string;
   }>({});
   const router = useRouter();
@@ -326,7 +322,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="grid grid-cols-7 border-b border-[var(--border)]">
-          {weekDays.map((day, index) => {
+          {weekDays.map((day, _) => {
             const dayKey = day.toISOString();
             const isHovered = hoveredDay === dayKey;
             const isToday = day.toDateString() === new Date().toDateString();
@@ -351,7 +347,6 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
           {weekDays.map((day, index) => {
             const dayTasks = getTasksForDate(day);
             const dayKey = day.toISOString();
-            const isHovered = hoveredDay === dayKey && !hoveredTask;
             return (
               <motion.div 
                 key={dayKey} 
@@ -375,8 +370,6 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                       e.stopPropagation();
                       router.push(`/projects/${projectId}/task/${task.id}?boardId=${boardId}`);
                     }}
-                    onMouseEnter={() => setHoveredTask(task.id)}
-                    onMouseLeave={() => setHoveredTask(null)}
                     className={`w-full bg-[var(--surface)] text-[var(--text)] p-2.5 rounded-md text-xs hover:opacity-95 hover:scale-[1.01] hover:shadow-md transition-all duration-150 ease-out cursor-pointer text-left border-l-3 ${getTaskColor(task)} mb-1.5 relative`}
                     style={{ zIndex: taskIndex + 1 }}
                     title={`${task.title}${task.assignment?.assignedTo ? ` (${userDisplayNames[task.assignment.assignedTo] || task.assignment.assignedTo})` : ''}${task.description ? `\n${task.description}` : ''}`}
@@ -467,7 +460,6 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
             const isCurrentMonth = day.getMonth() === currentDate.getMonth();
             const isToday = day.toDateString() === new Date().toDateString();
             const dayKey = day.toISOString();
-            const isHovered = hoveredDay === dayKey && !hoveredTask;
             
             return (
               <motion.div
@@ -500,8 +492,6 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                         e.stopPropagation();
                         router.push(`/projects/${projectId}/task/${task.id}?boardId=${boardId}`);
                       }}
-                      onMouseEnter={() => setHoveredTask(task.id)}
-                      onMouseLeave={() => setHoveredTask(null)}
                       className={`w-full bg-[var(--surface)] text-[var(--text)] text-xs p-1 rounded hover:opacity-95 hover:scale-[1.01] hover:shadow-sm transition-all duration-150 ease-out cursor-pointer text-left border-l-2 ${getTaskColor(task)} relative`}
                       title={`${task.title} (${task.column})${task.assignment?.assignedTo ? ` - ${userDisplayNames[task.assignment.assignedTo] || task.assignment.assignedTo}` : ''}${task.description ? `\n${task.description}` : ''}`}
                       initial={{ opacity: 0, scale: 0.8 }}

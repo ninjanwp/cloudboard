@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { FaBell, FaUser, FaChevronDown } from "react-icons/fa6";
+import { FaBell, FaChevronDown } from "react-icons/fa6";
 import { SignInModal } from "./SignInModal";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
-import Image from "next/image";
 import { UserAvatar } from "./UserAvatar";
 
 export const Header = ({

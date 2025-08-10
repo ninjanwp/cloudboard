@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "../context/ThemeContext";
 import { ThemeName, themes } from "../types/theme";
 import Image from "next/image";
-import { AvatarStyle, AvatarColor, AvatarSettings, clearAvatarSettingsCache } from "../utils/avatarUtils";
+import { AvatarColor, AvatarSettings, clearAvatarSettingsCache } from "../utils/avatarUtils";
 
 // Avatar customization types and preview component
 const AvatarPreview = ({ 
