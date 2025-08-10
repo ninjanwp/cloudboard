@@ -322,7 +322,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
               <motion.div 
                 key={dayKey} 
                 className={`border-r border-[var(--border)] p-2 h-full space-y-1 cursor-pointer relative group overflow-y-auto transition-colors ${
-                  isHovered ? 'bg-[var(--surface)]' : ''
+                  isHovered ? 'bg-[var(--surface)] animate-pulse' : ''
                 }`}
                 onClick={() => handleDateClick(day)}
                 title="Click to view day"
@@ -336,18 +336,6 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                   ease: "easeOut"
                 }}
               >
-                <button
-                  className={`absolute top-1 right-1 w-6 h-6 bg-[var(--accent)] text-white rounded-full flex items-center justify-center transition-opacity z-10 hover:bg-[var(--accent-hover)] ${
-                    isHovered ? 'opacity-100' : 'opacity-0'
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCreateTaskClick(day);
-                  }}
-                  title="Create task for this day"
-                >
-                  <FiPlus className="w-3 h-3" />
-                </button>
                 {dayTasks.map((task, taskIndex) => (
                   <motion.button
                     key={task.id}
@@ -357,7 +345,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                     }}
                     onMouseEnter={() => setHoveredTask(task.id)}
                     onMouseLeave={() => setHoveredTask(null)}
-                    className={`w-full bg-[var(--surface)] text-[var(--text)] p-2 rounded text-xs hover:opacity-95 hover:scale-[1.02] hover:shadow-lg hover:-translate-y-0.5 hover:ring-1 hover:ring-white/20 transition-all duration-200 ease-out cursor-pointer text-left transform-gpu border-l-2 ${getTaskColor(task)}`}
+                    className={`w-full bg-[var(--surface)] text-[var(--text)] p-2 rounded text-xs hover:opacity-95 hover:scale-[1.02] hover:shadow-lg hover:-translate-y-0.5 hover:animate-pulse transition-all duration-200 ease-out cursor-pointer text-left transform-gpu border-l-2 ${getTaskColor(task)}`}
                     style={{ zIndex: taskIndex + 1 }}
                     title={`${task.title}${task.assignment?.assignedTo ? ` (${userDisplayNames[task.assignment.assignedTo] || task.assignment.assignedTo})` : ''}${task.description ? `\n${task.description}` : ''}`}
                     initial={{ opacity: 0, y: -10 }}
@@ -519,7 +507,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
   };
 
   return (
-    <div className="h-full flex flex-col bg-[var(--background)]">
+    <div className="h-full flex flex-col bg-[var(--background)] overflow-hidden">
       {/* Header */}
       <div className="p-3 border-b border-[var(--border)] flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -542,7 +530,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => handleDateClick(new Date())}
+            onClick={() => handleCreateTaskClick(new Date())}
             className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors font-medium"
           >
             <FiPlus className="w-4 h-4" />
@@ -576,7 +564,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.2 }}
-        className="flex-1 flex flex-col"
+        className="flex-1 flex flex-col overflow-hidden"
       >
         {view === 'day' && renderDayView()}
         {view === 'week' && renderWeekView()}

@@ -195,6 +195,16 @@ const Board = ({
           />
         </div>
       </div>
+      
+      {/* Floating Add Task Button */}
+      <div className="absolute bottom-6 right-6">
+        <AddCard
+          column="backlog"
+          cards={cards}
+          projectId={projectId}
+          boardId={boardId}
+        />
+      </div>
     </div>
   );
 };
@@ -378,14 +388,6 @@ const Column = ({
           </span>
           <h3 className="font-bold text-[var(--text)] text-lg">{title}</h3>
         </div>
-        {column === "backlog" && (
-          <AddCard
-            column={column}
-            cards={cards}
-            projectId={projectId}
-            boardId={boardId}
-          />
-        )}
       </div>
       <div
         onDrop={handleDragEnd}
@@ -755,9 +757,11 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
       <motion.button
         layout
         onClick={() => setIsModalOpen(true)}
-        className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors font-medium shadow-sm"
+        className="flex items-center gap-3 px-6 py-4 bg-[var(--accent)] text-white rounded-xl hover:bg-[var(--accent-hover)] transition-all duration-200 font-medium shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
       >
-        <FiPlus className="w-4 h-4" />
+        <FiPlus className="w-5 h-5" />
         <span>New Task</span>
       </motion.button>
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>

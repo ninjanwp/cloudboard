@@ -72,7 +72,7 @@ export default function TaskPage() {
   // Auto-resize textarea function
   const autoResizeTextarea = (element: HTMLTextAreaElement) => {
     element.style.height = 'auto';
-    element.style.height = `${Math.max(120, element.scrollHeight)}px`;
+    element.style.height = `${Math.max(120, element.scrollHeight+2)}px`;
   };
   
   // Form state for editing
@@ -310,7 +310,7 @@ export default function TaskPage() {
 
   if (error || !task) {
     return (
-      <div className="min-h-screen bg-[var(--background)] flex items-center justify-center">
+      <div className="bg-[var(--background)] flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-[var(--text)] mb-4">
             {error || "Task not found"}
@@ -327,10 +327,10 @@ export default function TaskPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
-      <div className="max-w-7xl mx-auto p-4">
+    <div className="bg-[var(--background)] overflow-x-hidden">
+      <div className="max-w-[120rem] mx-auto p-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-3">
           <button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-[var(--text-secondary)] hover:text-[var(--text)] transition-colors px-3 py-2 rounded-lg hover:bg-[var(--surface)] group"
@@ -350,7 +350,7 @@ export default function TaskPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           {/* Main Content */}
           <div className="lg:col-span-3">
             <motion.div
@@ -359,7 +359,7 @@ export default function TaskPage() {
               className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6 shadow-sm overflow-hidden"
             >
               {/* Title */}
-              <div className="mb-6">
+              <div className="mb-3">
                 {editingField === 'title' ? (
                   <input
                     type="text"
@@ -367,13 +367,13 @@ export default function TaskPage() {
                     onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
                     onBlur={() => handleFieldSave('title', editForm.title)}
                     onKeyDown={(e) => handleKeyDown(e, 'title', editForm.title)}
-                    className="w-full text-3xl leading-tight font-bold bg-transparent px-2 py-1 rounded border border-[var(--accent)] focus:border-[var(--accent)] outline-none text-[var(--text)]"
+                    className="w-full text-3xl leading-tight font-bold bg-[var(--surface)] px-2 py-1 rounded border border-[var(--accent)] focus:border-[var(--accent)] outline-none text-[var(--text)]"
                     placeholder="Task title..."
                     autoFocus
                   />
                 ) : (
                   <h1 
-                    className="text-3xl font-bold text-[var(--text)] leading-tight border border-transparent cursor-pointer px-2 py-1 rounded hover:bg-[var(--border)] transition-all duration-200"
+                    className="text-3xl font-bold text-[var(--text)] leading-tight border border-transparent cursor-pointer px-2 py-1 rounded hover:bg-[var(--surface)] hover:border-[var(--border)] transition-all duration-200"
                     onClick={() => handleFieldEdit('title')}
                     title="Click to edit title"
                   >
@@ -383,7 +383,7 @@ export default function TaskPage() {
               </div>
 
               {/* Description */}
-              <div className="mb-6">
+              <div className="mb-3">
                 {editingField === 'description' ? (
                   <textarea
                     ref={(el) => {
@@ -410,19 +410,25 @@ export default function TaskPage() {
                         });
                       }
                     }}
-                    className="w-full min-h-[120px] bg-[var(--surface)] border border-[var(--border)] rounded-lg p-4 text-[var(--text)] focus:border-[var(--accent)] outline-none resize-none break-words overflow-hidden"
+                    className="block px-3 py-1 w-full min-h-[120px] bg-[var(--surface)] border border-[var(--accent)] rounded-lg text-[var(--text)] focus:border-[var(--accent)] outline-none resize-none break-words overflow-hidden"
                     placeholder="Add a description..."
                     autoFocus
                   />
                 ) : (
                   <div 
-                    className="min-h-[120px] p-4 bg-[var(--surface)] border border-transparent rounded-lg cursor-pointer hover:bg-[var(--border)] transition-all duration-200"
+                    className="block min-h-[120px] px-3 py-1 bg-transparent border border-transparent rounded-lg cursor-pointer hover:bg-[var(--surface)] hover:border-[var(--border)] transition-all duration-200"
                     onClick={() => handleFieldEdit('description')}
                     title="Click to edit description"
                   >
-                    <div className="text-[var(--text)] whitespace-pre-wrap break-words">
-                      {task.description || "Click to add a description..."}
-                    </div>
+                    {task.description ? (
+                      <div className="text-[var(--text)] whitespace-pre-wrap">
+                        {task.description}
+                      </div>
+                    ) : (
+                      <div className="text-[var(--text-secondary)] italic">
+                        Click to add a description...
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -441,7 +447,7 @@ export default function TaskPage() {
                           type="url"
                           value={link}
                           onChange={(e) => updateLink(index, e.target.value)}
-                          className="flex-1 p-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text)] focus:border-[var(--accent)] outline-none"
+                          className="flex-1 p-3 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--text)] focus:border-[var(--accent)] outline-none"
                           placeholder="https://example.com"
                         />
                         <button
@@ -484,7 +490,7 @@ export default function TaskPage() {
                       ))
                     ) : (
                       <div 
-                        className="text-[var(--text-secondary)] italic p-2 cursor-pointer hover:bg-[var(--background)] rounded transition-colors"
+                        className="text-[var(--text-secondary)] italic p-2 cursor-pointer hover:bg-[var(--surface)] rounded transition-colors"
                         onClick={() => handleFieldEdit('links')}
                         title="Click to add links"
                       >
@@ -546,7 +552,7 @@ export default function TaskPage() {
                       setEditForm(prev => ({ ...prev, date: newDate }));
                       handleFieldSave('date', newDate);
                     }}
-                    className="w-full p-2 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text)] hover:border-[var(--accent)] focus:border-[var(--accent)] outline-none cursor-pointer [color-scheme:dark]"
+                    className="w-full p-2 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text)] hover:bg-[var(--surface)] hover:border-[var(--accent)] focus:bg-[var(--surface)] focus:border-[var(--accent)] outline-none cursor-pointer [color-scheme:dark]"
                     style={{ colorScheme: 'dark' }}
                     title="Select date"
                   />
@@ -606,7 +612,7 @@ export default function TaskPage() {
                               handleFieldSave('duration', editForm.duration);
                             }
                           }}
-                          className="flex-1 p-2 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text)] focus:border-[var(--accent)] outline-none"
+                          className="flex-1 p-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--text)] focus:border-[var(--accent)] outline-none"
                           placeholder="Minutes"
                         />
                         <span className="text-sm text-[var(--text-secondary)]">min</span>
@@ -661,7 +667,7 @@ export default function TaskPage() {
                     }));
                     handleFieldSave('assignment', { assignedTo: e.target.value || null });
                   }}
-                  className="w-full p-2 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text)] hover:border-[var(--accent)] focus:border-[var(--accent)] outline-none cursor-pointer"
+                  className="w-full p-2 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text)] hover:bg-[var(--surface)] hover:border-[var(--accent)] focus:bg-[var(--surface)] focus:border-[var(--accent)] outline-none cursor-pointer"
                   title="Select assignee"
                 >
                   <option value="">Unassigned</option>
