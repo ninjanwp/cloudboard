@@ -7,7 +7,8 @@ import { FiChevronLeft, FiChevronRight, FiCalendar, FiClock, FiPlus, FiX } from 
 import { collection, onSnapshot, addDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { useAuth } from "../context/AuthContext";
-import { getUserDisplayName } from "../utils/userUtils";
+import { getUserDisplayName, getUserPhotoURL } from "../utils/userUtils";
+import { UserAvatar } from "./UserAvatar";
 
 type CalendarTask = {
   id: string;
@@ -37,6 +38,9 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
   const [hoveredTask, setHoveredTask] = useState<string | null>(null);
   const [userDisplayNames, setUserDisplayNames] = useState<{
+    [email: string]: string;
+  }>({});
+  const [userPhotoURLs, setUserPhotoURLs] = useState<{
     [email: string]: string;
   }>({});
   const router = useRouter();
@@ -72,6 +76,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
 
       // Load display names for emails we don't have cached
       const newDisplayNames: {[email: string]: string} = {};
+      
       for (const email of uniqueEmails) {
         if (!userDisplayNames[email]) {
           const displayName = await getUserDisplayName(email);
@@ -253,31 +258,50 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                 <button
                   key={task.id}
                   onClick={() => router.push(`/projects/${projectId}/task/${task.id}?boardId=${boardId}`)}
-                  className={`w-full p-4 rounded-lg bg-[var(--surface)] text-[var(--text)] text-left hover:opacity-95 hover:shadow-xl hover:ring-1 hover:ring-white/20 transition-all duration-200 ease-out cursor-pointer transform-gpu border-l-4 ${getTaskColor(task)}`}
+                  className={`w-full p-3 rounded-lg bg-[var(--surface)] text-[var(--text)] text-left hover:opacity-95 hover:scale-[1.01] hover:shadow-md transition-all duration-150 ease-out cursor-pointer border-l-3 ${getTaskColor(task)} relative`}
                   title={`${task.title}${task.assignment?.assignedTo ? ` (${userDisplayNames[task.assignment.assignedTo] || task.assignment.assignedTo})` : ''}${task.description ? `\n${task.description}` : ''}`}
                 >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="font-medium mb-1">
-                        {task.title}
+                  {/* Status badge in top right corner */}
+                  <div className="absolute top-2 right-2">
+                    <span className="capitalize font-medium px-2 py-1 bg-[var(--background)] rounded text-[var(--text-secondary)] text-xs leading-none">
+                      {task.column === 'todo' ? 'Todo' : task.column === 'in-progress' ? 'In Progress' : task.column === 'done' ? 'Done' : task.column}
+                    </span>
+                  </div>
+                  
+                  {/* Main content with right margin to avoid status badge */}
+                  <div className="pr-20">
+                    <div className="font-medium text-sm mb-2 line-clamp-2">
+                      {task.title}
+                    </div>
+                    
+                    {task.description && (
+                      <div className="text-sm opacity-80 mb-3 line-clamp-2">
+                        {task.description}
                       </div>
-                      {task.description && (
-                        <div className="text-sm opacity-90 mb-2">
-                          {task.description}
-                        </div>
-                      )}
-                      <div className="flex gap-4 text-sm opacity-75">
+                    )}
+                    
+                    {/* Bottom info row */}
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-4">
                         {task.duration && (
-                          <span className="flex items-center gap-1">
+                          <span className="text-[var(--text-secondary)] flex items-center gap-1">
                             <FiClock className="w-3 h-3" />
                             {formatDuration(task.duration)}
                           </span>
                         )}
-                        {task.assignment?.assignedTo && (
-                          <span>@{userDisplayNames[task.assignment.assignedTo] || task.assignment.assignedTo.split('@')[0]}</span>
-                        )}
-                        <span className="capitalize">{task.column}</span>
                       </div>
+                      {task.assignment?.assignedTo && (
+                        <div className="flex items-center gap-2">
+                          <UserAvatar
+                            email={task.assignment.assignedTo}
+                            displayName={userDisplayNames[task.assignment.assignedTo]}
+                            size="sm"
+                          />
+                          <span className="text-[var(--accent)] font-medium text-sm">
+                            {userDisplayNames[task.assignment.assignedTo]?.split(' ')[0] || task.assignment.assignedTo.split('@')[0]}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -302,16 +326,26 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="grid grid-cols-7 border-b border-[var(--border)]">
-          {weekDays.map(day => (
-            <div key={day.toISOString()} className="p-3 text-center border-r border-[var(--border)]">
-              <div className="text-sm text-[var(--text-secondary)]">
-                {day.toLocaleDateString('en-US', { weekday: 'short' })}
+          {weekDays.map((day, index) => {
+            const dayKey = day.toISOString();
+            const isHovered = hoveredDay === dayKey;
+            const isToday = day.toDateString() === new Date().toDateString();
+            return (
+              <div 
+                key={day.toISOString()} 
+                className={`p-3 text-center border-r border-[var(--border)] transition-colors duration-200 ${
+                  isHovered ? 'bg-[var(--accent)] text-white' : isToday ? 'bg-[var(--accent)]/10' : ''
+                }`}
+              >
+                <div className={`text-sm ${isHovered ? 'text-white' : isToday ? 'text-[var(--accent)] font-semibold' : 'text-[var(--text-secondary)]'}`}>
+                  {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                </div>
+                <div className={`text-lg font-medium ${isHovered ? 'text-white' : isToday ? 'text-[var(--accent)] font-bold' : 'text-[var(--text)]'}`}>
+                  {day.getDate()}
+                </div>
               </div>
-              <div className="text-lg font-medium text-[var(--text)]">
-                {day.getDate()}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="grid grid-cols-7 flex-1 overflow-hidden">
           {weekDays.map((day, index) => {
@@ -321,9 +355,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
             return (
               <motion.div 
                 key={dayKey} 
-                className={`border-r border-[var(--border)] p-2 h-full space-y-1 cursor-pointer relative group overflow-y-auto transition-colors ${
-                  isHovered ? 'bg-[var(--surface)] animate-pulse' : ''
-                }`}
+                className={`border-r border-[var(--border)] p-2 h-full space-y-1 cursor-pointer relative group overflow-y-auto transition-colors`}
                 onClick={() => handleDateClick(day)}
                 title="Click to view day"
                 onMouseEnter={() => setHoveredDay(dayKey)}
@@ -332,7 +364,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ 
                   duration: 0.3, 
-                  delay: index * 0.1,
+                  delay: index * 0.05,
                   ease: "easeOut"
                 }}
               >
@@ -345,7 +377,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                     }}
                     onMouseEnter={() => setHoveredTask(task.id)}
                     onMouseLeave={() => setHoveredTask(null)}
-                    className={`w-full bg-[var(--surface)] text-[var(--text)] p-2 rounded text-xs hover:opacity-95 hover:scale-[1.02] hover:shadow-lg hover:-translate-y-0.5 hover:animate-pulse transition-all duration-200 ease-out cursor-pointer text-left transform-gpu border-l-2 ${getTaskColor(task)}`}
+                    className={`w-full bg-[var(--surface)] text-[var(--text)] p-2.5 rounded-md text-xs hover:opacity-95 hover:scale-[1.01] hover:shadow-md transition-all duration-150 ease-out cursor-pointer text-left border-l-3 ${getTaskColor(task)} mb-1.5 relative`}
                     style={{ zIndex: taskIndex + 1 }}
                     title={`${task.title}${task.assignment?.assignedTo ? ` (${userDisplayNames[task.assignment.assignedTo] || task.assignment.assignedTo})` : ''}${task.description ? `\n${task.description}` : ''}`}
                     initial={{ opacity: 0, y: -10 }}
@@ -356,18 +388,44 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                       ease: "easeOut"
                     }}
                   >
-                    <div className="font-medium leading-tight mb-1">
-                      {truncateText(task.title, 25)}
+                    {/* Status badge in top right corner */}
+                    <div className="absolute top-1.5 right-1.5">
+                      <span className="capitalize font-medium px-1.5 py-0.5 bg-[var(--background)] rounded text-[var(--text-secondary)] text-xs leading-none">
+                        {task.column === 'todo' ? 'Todo' : task.column === 'in-progress' ? 'In Progress' : task.column === 'done' ? 'Done' : task.column}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between text-xs opacity-75">
-                      <span className="capitalize">{task.column}</span>
+                    
+                    {/* Main content with right margin to avoid status badge */}
+                    <div className="pr-16 pb-6">
+                      <div className="font-medium text-xs leading-snug mb-1.5 line-clamp-2">
+                        {task.title}
+                      </div>
+                      
+                      {task.description && (
+                        <div className="text-xs opacity-70 mb-1.5 line-clamp-1">
+                          {task.description}
+                        </div>
+                      )}
+                      
+                      {/* Duration info */}
                       {task.duration && (
-                        <span>{formatDuration(task.duration)}</span>
+                        <div className="text-xs">
+                          <span className="text-[var(--text-secondary)] flex items-center gap-1">
+                            <FiClock className="w-2.5 h-2.5" />
+                            {formatDuration(task.duration)}
+                          </span>
+                        </div>
                       )}
                     </div>
+                    
+                    {/* User avatar in bottom right corner */}
                     {task.assignment?.assignedTo && (
-                      <div className="text-xs opacity-75 mt-1 truncate">
-                        @{userDisplayNames[task.assignment.assignedTo] || task.assignment.assignedTo.split('@')[0]}
+                      <div className="absolute bottom-1.5 right-1.5">
+                        <UserAvatar
+                          email={task.assignment.assignedTo}
+                          displayName={userDisplayNames[task.assignment.assignedTo]}
+                          size="sm"
+                        />
                       </div>
                     )}
                   </motion.button>
@@ -416,9 +474,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                 key={dayKey}
                 className={`border-r border-b border-[var(--border)] p-1 h-full cursor-pointer relative group overflow-y-auto transition-colors ${
                   !isCurrentMonth ? 'text-[var(--text-secondary)] bg-[var(--surface)] opacity-75' : ''
-                } ${isToday ? 'ring-2 ring-[var(--accent)] ring-inset' : ''} ${
-                  isHovered ? 'bg-[var(--surface)]' : ''
-                }`}
+                } ${isToday ? 'ring-2 ring-[var(--accent)] ring-inset' : ''}`}
                 onClick={() => handleDateClick(day)}
                 title="Click to view day"
                 onMouseEnter={() => setHoveredDay(dayKey)}
@@ -431,18 +487,6 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                   ease: "easeOut"
                 }}
               >
-                <button
-                  className={`absolute top-0.5 right-0.5 w-5 h-5 bg-[var(--accent)] text-white rounded-full flex items-center justify-center transition-opacity z-10 hover:bg-[var(--accent-hover)] ${
-                    isHovered ? 'opacity-100' : 'opacity-0'
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCreateTaskClick(day);
-                  }}
-                  title="Create task for this day"
-                >
-                  <FiPlus className="w-2.5 h-2.5" />
-                </button>
                 <div className={`text-sm mb-1 font-medium ${
                   isToday ? 'text-[var(--accent)]' : day.getMonth() !== currentDate.getMonth() ? 'text-[var(--text-secondary)]' : 'text-[var(--text)]'
                 }`}>
@@ -458,7 +502,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                       }}
                       onMouseEnter={() => setHoveredTask(task.id)}
                       onMouseLeave={() => setHoveredTask(null)}
-                      className={`w-full bg-[var(--surface)] text-[var(--text)] text-xs p-1 rounded truncate hover:opacity-95 hover:scale-[1.02] hover:shadow-lg hover:-translate-y-0.5 hover:ring-1 hover:ring-white/20 transition-all duration-200 ease-out cursor-pointer text-left transform-gpu border-l-2 ${getTaskColor(task)}`}
+                      className={`w-full bg-[var(--surface)] text-[var(--text)] text-xs p-1 rounded hover:opacity-95 hover:scale-[1.01] hover:shadow-sm transition-all duration-150 ease-out cursor-pointer text-left border-l-2 ${getTaskColor(task)} relative`}
                       title={`${task.title} (${task.column})${task.assignment?.assignedTo ? ` - ${userDisplayNames[task.assignment.assignedTo] || task.assignment.assignedTo}` : ''}${task.description ? `\n${task.description}` : ''}`}
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -468,17 +512,24 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
                         ease: "easeOut"
                       }}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="truncate flex-1 mr-1">
-                          {truncateText(task.title, 12)}
-                        </span>
-                        {task.assignment?.assignedTo && (
-                          <span className="opacity-75 text-xs">@</span>
-                        )}
+                      <div className="font-medium text-xs leading-tight line-clamp-1 pr-4">
+                        {truncateText(task.title, 15)}
                       </div>
                       {task.duration && (
-                        <div className="opacity-75 text-xs mt-0.5 truncate">
+                        <div className="text-xs opacity-60 flex items-center gap-0.5 mt-0.5">
+                          <FiClock className="w-2 h-2" />
                           {formatDuration(task.duration)}
+                        </div>
+                      )}
+                      
+                      {/* User avatar in top right corner of task card */}
+                      {task.assignment?.assignedTo && (
+                        <div className="absolute top-0.5 right-0.5">
+                          <UserAvatar
+                            email={task.assignment.assignedTo}
+                            displayName={userDisplayNames[task.assignment.assignedTo]}
+                            size="xs"
+                          />
                         </div>
                       )}
                     </motion.button>

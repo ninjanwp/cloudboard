@@ -26,6 +26,7 @@ import classNames from "classnames";
 import { FaLink } from "react-icons/fa6";
 import { getUserDisplayName } from "../utils/userUtils";
 import { createLog } from "../utils/logUtils";
+import { UserAvatar } from "./UserAvatar";
 
 const GridBackground = () => (
   <motion.div
@@ -613,8 +614,12 @@ const Card = ({ ...props }: CardProps) => {
           )}
 
           {props.assignment?.assignedTo && (
-            <div className="flex items-center gap-2 bg-[var(--background)] border border-[var(--border)] rounded-lg p-3">
-              <FiUser className="w-4 h-4 text-[var(--accent)]" />
+            <div className="flex items-center gap-3 bg-[var(--background)] border border-[var(--border)] rounded-lg p-3">
+              <UserAvatar
+                email={props.assignment.assignedTo}
+                displayName={userDisplayNames[props.assignment.assignedTo]}
+                size="sm"
+              />
               <div className="flex flex-col">
                 <span className="text-xs text-[var(--text-secondary)]">Assigned to</span>
                 <span className="text-sm font-medium text-[var(--text)]">
@@ -937,6 +942,7 @@ const TaskAssignment = ({
   const [userDisplayNames, setUserDisplayNames] = useState<{
     [email: string]: string;
   }>({});
+  
   useEffect(() => {
     const loadDisplayNames = async () => {
       const names: { [email: string]: string } = {};
@@ -966,6 +972,11 @@ const TaskAssignment = ({
               checked={currentAssignee === member}
               onChange={() => onAssign(member)}
               className="w-4 h-4 text-[var(--accent)] border-2 border-[var(--border)] focus:ring-[var(--accent)] focus:ring-2"
+            />
+            <UserAvatar
+              email={member}
+              displayName={userDisplayNames[member]}
+              size="sm"
             />
             <div className="flex-1">
               <span className="text-[var(--text)] font-medium">

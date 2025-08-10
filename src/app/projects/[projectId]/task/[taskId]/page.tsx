@@ -10,6 +10,7 @@ import { FiArrowLeft, FiTrash, FiCalendar, FiClock, FiUser, FiLink, FiMoreVertic
 import { motion } from "framer-motion";
 import { createLog } from "../../../../utils/logUtils";
 import { getUserDisplayName } from "../../../../utils/userUtils";
+import { UserAvatar } from "../../../../components/UserAvatar";
 
 type CardType = {
   id: string;
@@ -658,25 +659,19 @@ export default function TaskPage() {
                 Assignment
               </h3>
               <div className="relative">
-                <select
-                  value={editForm.assignment.assignedTo || ''}
-                  onChange={(e) => {
+                {/* Custom Assignment Dropdown */}
+                <AssignmentDropdown
+                  currentAssignee={editForm.assignment.assignedTo}
+                  projectMembers={projectMembers}
+                  memberDisplayNames={memberDisplayNames}
+                  onAssigneeChange={(assignee) => {
                     setEditForm(prev => ({ 
                       ...prev, 
-                      assignment: { assignedTo: e.target.value || null } 
+                      assignment: { assignedTo: assignee } 
                     }));
-                    handleFieldSave('assignment', { assignedTo: e.target.value || null });
+                    handleFieldSave('assignment', { assignedTo: assignee });
                   }}
-                  className="w-full p-2 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text)] hover:bg-[var(--surface)] hover:border-[var(--accent)] focus:bg-[var(--surface)] focus:border-[var(--accent)] outline-none cursor-pointer"
-                  title="Select assignee"
-                >
-                  <option value="">Unassigned</option>
-                  {projectMembers.map(memberEmail => (
-                    <option key={memberEmail} value={memberEmail}>
-                      {memberDisplayNames[memberEmail] || memberEmail}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </motion.div>
 
@@ -744,3 +739,109 @@ export default function TaskPage() {
     </div>
   );
 }
+
+// Assignment Dropdown Component
+const AssignmentDropdown = ({
+  currentAssignee,
+  projectMembers,
+  memberDisplayNames,
+  onAssigneeChange
+}: {
+  currentAssignee: string | null;
+  projectMembers: string[];
+  memberDisplayNames: { [email: string]: string };
+  onAssigneeChange: (assignee: string | null) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isOpen) {
+        const target = event.target as Element;
+        if (!target.closest('[data-assignment-dropdown]')) {
+          setIsOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const getCurrentAssigneeDisplay = () => {
+    if (!currentAssignee) return "Unassigned";
+    return memberDisplayNames[currentAssignee] || currentAssignee;
+  };
+
+  return (
+    <div className="relative" data-assignment-dropdown>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full p-3 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text)] hover:bg-[var(--surface)] hover:border-[var(--accent)] focus:bg-[var(--surface)] focus:border-[var(--accent)] outline-none cursor-pointer flex items-center gap-3"
+      >
+        {currentAssignee && (
+          <UserAvatar
+            email={currentAssignee}
+            displayName={memberDisplayNames[currentAssignee]}
+            size="sm"
+          />
+        )}
+        <span className="flex-1 text-left">{getCurrentAssigneeDisplay()}</span>
+        <motion.div
+          animate={{ rotate: isOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          ▼
+        </motion.div>
+      </button>
+      
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="absolute top-full left-0 right-0 mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"
+        >
+          <button
+            onClick={() => {
+              onAssigneeChange(null);
+              setIsOpen(false);
+            }}
+            className="w-full p-3 text-left hover:bg-[var(--background)] transition-colors flex items-center gap-3"
+          >
+            <div className="w-6 h-6" /> {/* Empty space for alignment */}
+            <span className="text-[var(--text-secondary)]">Unassigned</span>
+          </button>
+          
+          {projectMembers.map((member) => (
+            <button
+              key={member}
+              onClick={() => {
+                onAssigneeChange(member);
+                setIsOpen(false);
+              }}
+              className={`w-full p-3 text-left hover:bg-[var(--background)] transition-colors flex items-center gap-3 ${
+                currentAssignee === member ? 'bg-[var(--accent)]/10' : ''
+              }`}
+            >
+              <UserAvatar
+                email={member}
+                displayName={memberDisplayNames[member]}
+                size="sm"
+              />
+              <span className="text-[var(--text)]">
+                {memberDisplayNames[member] || member}
+              </span>
+              {currentAssignee === member && (
+                <span className="ml-auto text-xs text-[var(--accent)] font-medium">
+                  Assigned
+                </span>
+              )}
+            </button>
+          ))}
+        </motion.div>
+      )}
+    </div>
+  );
+};

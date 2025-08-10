@@ -24,6 +24,7 @@ import { getUserDisplayName } from "../../../utils/userUtils";
 import { createLog } from "../../../utils/logUtils";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { UserAvatar } from "../../../components/UserAvatar";
 
 // Types defined as before
 type Message = {
@@ -38,75 +39,6 @@ type TypingUser = {
   id: string;
   displayName: string;
   timestamp: Date;
-  photoURL?: string;
-};
-
-// User avatar component that displays profile image or fallback
-const UserAvatar = ({
-  email,
-  photoURL,
-  size = "md",
-  className = "",
-}: {
-  email: string;
-  photoURL?: string;
-  size?: "sm" | "md" | "lg";
-  className?: string;
-}) => {
-  const sizeClasses = {
-    sm: "w-6 h-6 text-xs",
-    md: "w-9 h-9 text-sm",
-    lg: "w-12 h-12 text-base",
-  };
-
-  const classes = `${sizeClasses[size]} rounded-full flex items-center justify-center flex-shrink-0 ${className}`;
-  
-  // Get numeric dimensions from the size classes
-  const getDimension = (sizeClass: string) => {
-    return parseInt(sizeClass.split(" ")[0].replace("w-", "")) * 4;
-  };
-
-  const width = getDimension(sizeClasses[size]);
-  // Removed the unused height variable
-
-  if (photoURL) {
-    return (
-      <div className={`${classes} overflow-hidden relative`}>
-        <Image
-          src={photoURL}
-          alt={`${email}'s avatar`}
-          fill
-          sizes={`${width}px`}
-          className="object-cover"
-          unoptimized // This is important for external images
-        />
-      </div>
-    );
-  }
-
-  // Fallback to first letter of email with colored background
-  const initial = email.charAt(0).toUpperCase();
-  const hashCode = Array.from(email).reduce(
-    (acc, char) => acc + char.charCodeAt(0),
-    0
-  );
-  const colors = [
-    "bg-blue-500",
-    "bg-purple-500",
-    "bg-green-500",
-    "bg-yellow-500",
-    "bg-pink-500",
-    "bg-indigo-500",
-    "bg-red-500",
-    "bg-teal-500",
-  ];
-  const colorClass = colors[hashCode % colors.length];
-
-  return (
-    <div className={`${classes} ${colorClass} text-white font-medium`}>
-      {initial}
-    </div>
-  );
 };
 
 export default function ProjectChatPage() {
@@ -117,9 +49,6 @@ export default function ProjectChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [userDisplayNames, setUserDisplayNames] = useState<{
-    [email: string]: string;
-  }>({});
-  const [userPhotos, setUserPhotos] = useState<{
     [email: string]: string;
   }>({});
   const [error, setError] = useState<string | null>(null);
@@ -145,28 +74,14 @@ export default function ProjectChatPage() {
         // to load display names and photos
         const members = projectSnap.data().members || [];
 
-        // Load display names and photos for all members
+        // Load display names for all members
         const names: { [email: string]: string } = {};
-        const photos: { [email: string]: string } = {};
 
         for (const member of members) {
           names[member] = await getUserDisplayName(member);
-
-          // Get user photo if available
-          const usersRef = collection(db, "users");
-          const q = query(usersRef, where("email", "==", member));
-          const querySnapshot = await getDocs(q);
-
-          if (!querySnapshot.empty) {
-            const userData = querySnapshot.docs[0].data();
-            if (userData.photoURL) {
-              photos[member] = userData.photoURL;
-            }
-          }
         }
 
         setUserDisplayNames(names);
-        setUserPhotos(photos);
       } catch (err) {
         console.error("Error fetching project members:", err);
         setError("Failed to load project data");
@@ -242,7 +157,6 @@ export default function ProjectChatPage() {
             id: doc.id,
             displayName: data.displayName || data.email,
             timestamp: timestamp,
-            photoURL: userPhotos[data.email],
           });
         }
       });
@@ -251,7 +165,7 @@ export default function ProjectChatPage() {
     });
 
     return () => unsubscribe();
-  }, [projectId, user?.email, userPhotos]);
+  }, [projectId, user?.email]);
 
   // Clean up typing status (unchanged)
   useEffect(() => {
@@ -559,7 +473,6 @@ export default function ProjectChatPage() {
                           {!isCurrentUser && (
                             <UserAvatar
                               email={senderGroup.sender}
-                              photoURL={userPhotos[senderGroup.sender]}
                               className="mr-3 mt-0.5"
                               size="md"
                             />
@@ -615,9 +528,9 @@ export default function ProjectChatPage() {
                           {isCurrentUser && (
                             <UserAvatar
                               email={senderGroup.sender}
-                              photoURL={user?.photoURL || undefined}
                               className="ml-3 mt-0.5"
                               size="md"
+                              userUid={user?.uid}
                             />
                           )}
                         </div>
@@ -647,7 +560,6 @@ export default function ProjectChatPage() {
                   <UserAvatar
                     key={user.id}
                     email={user.id}
-                    photoURL={userPhotos[user.id]}
                     size="sm"
                     className="border-2 border-[var(--background)]"
                   />
