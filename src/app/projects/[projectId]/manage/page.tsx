@@ -15,6 +15,7 @@ import { Modal } from "../../../components/Modal";
 import { FaPen } from "react-icons/fa6";
 import { getUserDisplayName } from "../../../utils/userUtils";
 import { ActivityLogs } from "../../../components/ActivityLogs";
+import { UserAvatar } from "../../../components/UserAvatar";
 
 export default function ProjectManagePage() {
   const params = useParams();
@@ -149,170 +150,262 @@ export default function ProjectManagePage() {
   if (!currentProject) return null;
 
   return (
-    <div className="container mx-auto max-w-4xl p-6 mt-20">
-      <div className="mb-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <div 
-            className="flex items-center gap-4 group cursor-pointer"
-            onClick={() => {
-              if (isOwner) {
-                setEditName(currentProject.name);
-                setEditIcon(currentProject.icon || "FaStar");
-                setShowEditModal(true);
-              }
-            }}
-          >
-            <div className="w-12 h-12 flex items-center justify-center bg-[var(--surface)] rounded-lg border border-[var(--border)]">
-              <IconComponent className="w-6 h-6 text-[var(--text)]" />
+    <div className="container mx-auto max-w-5xl p-6 mt-20">
+      <div className="mb-10">
+        <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-8">
+          <div className="flex items-center justify-between">
+            <div 
+              className="flex items-center gap-6 group cursor-pointer"
+              onClick={() => {
+                if (isOwner) {
+                  setEditName(currentProject.name);
+                  setEditIcon(currentProject.icon || "FaStar");
+                  setShowEditModal(true);
+                }
+              }}
+            >
+              <div className="relative">
+                <div className="w-16 h-16 flex items-center justify-center bg-gradient-to-br from-[var(--accent)]/10 to-[var(--accent)]/5 rounded-2xl border-2 border-[var(--accent)]/20">
+                  <IconComponent className="w-8 h-8 text-[var(--accent)]" />
+                </div>
+                {isOwner && (
+                  <div className="absolute -bottom-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="w-6 h-6 bg-[var(--accent)] rounded-full flex items-center justify-center">
+                      <FaPen className="w-3 h-3 text-white" />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-[var(--text)] mb-1">{currentProject.name}</h1>
+                <p className="text-[var(--text-secondary)] flex items-center gap-2">
+                  <span>Project Management</span>
+                  {isOwner && (
+                    <>
+                      <span>•</span>
+                      <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-1 rounded-full font-medium">
+                        Owner
+                      </span>
+                    </>
+                  )}
+                </p>
+              </div>
             </div>
-            <h1 className="text-3xl font-bold text-[var(--text)]">{currentProject.name}</h1>
-            {isOwner && (
-              <button className="opacity-0 group-hover:opacity-100 transition-opacity p-2 bg-[var(--surface)] rounded-full">
-                <FaPen className="w-4 h-4 text-[var(--text-secondary)]" />
-              </button>
-            )}
           </div>
         </div>
-        <p className="text-[var(--text-secondary)]">Project Management</p>
       </div>
 
       {isOwner && (
-        <form onSubmit={handleInvite} className="mb-8">
-          <div className="flex gap-2">
-            <input
-              type="email"
-              value={newMemberEmail}
-              onChange={(e) => setNewMemberEmail(e.target.value)}
-              placeholder="Enter email to invite"
-              className="flex-1 rounded border border-[var(--border)] bg-[var(--surface)] p-2 text-[var(--text)]"
-            />
-            <button
-              type="submit"
-              className="rounded bg-[var(--accent)] px-4 py-2 text-white hover:bg-[var(--accent-hover)] flex items-center gap-2"
-            >
-              <FaUserPlus />
-              <span>Invite</span>
-            </button>
-          </div>
-          {error && <p className="mt-2 text-red-400 text-sm">{error}</p>}
-        </form>
+        <div className="mb-8 bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6">
+          <h3 className="text-lg font-semibold text-[var(--text)] mb-4 flex items-center gap-2">
+            <FaUserPlus className="text-[var(--accent)]" />
+            Invite Team Members
+          </h3>
+          <form onSubmit={handleInvite} className="space-y-4">
+            <div className="flex gap-3">
+              <input
+                type="email"
+                value={newMemberEmail}
+                onChange={(e) => setNewMemberEmail(e.target.value)}
+                placeholder="Enter email address to invite"
+                className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--background)] p-3 text-[var(--text)] focus:border-[var(--accent)] focus:outline-none transition-colors"
+              />
+              <button
+                type="submit"
+                className="rounded-lg bg-[var(--accent)] px-6 py-3 text-white hover:bg-[var(--accent-hover)] flex items-center gap-2 font-medium transition-colors"
+              >
+                <FaUserPlus />
+                <span>Send Invite</span>
+              </button>
+            </div>
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-red-400 text-sm">{error}</p>
+              </div>
+            )}
+          </form>
+        </div>
       )}
 
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold text-[var(--text)] mb-4">Project Members</h2>
-      {members.map((member) => (
-        <div
-        key={member}
-        className="flex items-center justify-between p-4 rounded bg-[var(--surface)] border border-[var(--border)] h-[60px]"
-        >
-        <div className="flex items-center gap-2">
-          <span 
-            className="text-[var(--text)]"
-            title={memberDisplayNames[member] ? `${memberDisplayNames[member]} (${member})` : member}
-          >
-            {memberDisplayNames[member] || member}
-            {member === user?.email && (
-              <span className="ml-1.5 text-[var(--text-secondary)] text-sm">(you)</span>
-            )}
+    <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden">
+      <div className="p-6 border-b border-[var(--border)]">
+        <h2 className="text-xl font-bold text-[var(--text)] flex items-center gap-2">
+          <div className="w-8 h-8 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center">
+            <FaCrown className="w-4 h-4 text-[var(--accent)]" />
+          </div>
+          Project Members
+          <span className="text-sm font-normal text-[var(--text-secondary)] ml-2">
+            ({members.length} member{members.length !== 1 ? 's' : ''})
           </span>
-          {member === members[0] && ( // First member in the array is always the owner
-            <FaCrown className="text-yellow-400" title="Project Owner" />
-          )}
-        </div>
-        {isOwner && member !== user?.email && (
-          <button
-            onClick={() => handleRemoveMember(member)}
-            className="text-red-400 hover:text-red-300 p-2 rounded flex items-center gap-2"
+        </h2>
+      </div>
+      <div className="divide-y divide-[var(--border)]">
+        {members.map((member, index) => (
+          <div
+            key={member}
+            className="flex items-center justify-between p-6 hover:bg-[var(--background)]/50 transition-colors"
           >
-            <FaUserMinus />Remove
-          </button>
-        )}
-        </div>
-      ))}
+            <div className="flex items-center gap-4">
+              <UserAvatar
+                email={member}
+                displayName={memberDisplayNames[member]}
+                size="md"
+                className="ring-2 ring-[var(--border)]"
+              />
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-[var(--text)]">
+                    {memberDisplayNames[member] || member}
+                  </span>
+                  {member === members[0] && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-yellow-500/10 text-yellow-500 rounded-full text-xs font-medium">
+                      <FaCrown className="w-3 h-3" />
+                      Owner
+                    </div>
+                  )}
+                  {member === user?.email && (
+                    <div className="px-2 py-1 bg-[var(--accent)]/10 text-[var(--accent)] rounded-full text-xs font-medium">
+                      You
+                    </div>
+                  )}
+                </div>
+                <span className="text-sm text-[var(--text-secondary)]">{member}</span>
+              </div>
+            </div>
+            {isOwner && member !== user?.email && (
+              <button
+                onClick={() => handleRemoveMember(member)}
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-lg flex items-center gap-2 transition-colors"
+                title={`Remove ${memberDisplayNames[member] || member} from project`}
+              >
+                <FaUserMinus className="w-4 h-4" />
+                <span className="text-sm font-medium">Remove</span>
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
 
-    <div className="mt-16">
-      <h2 className="text-xl font-bold text-[var(--text)] mb-6">Project Activity</h2>
-      <ActivityLogs projectId={projectId} />
+    <div className="mt-12 bg-[var(--surface)] rounded-xl border border-[var(--border)] overflow-hidden">
+      <div className="p-6 border-b border-[var(--border)]">
+        <h2 className="text-xl font-bold text-[var(--text)] flex items-center gap-2">
+          <div className="w-8 h-8 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center">
+            <FaUserPlus className="w-4 h-4 text-[var(--accent)]" />
+          </div>
+          Recent Activity
+        </h2>
+        <p className="text-sm text-[var(--text-secondary)] mt-1">
+          Track what's happening in your project
+        </p>
+      </div>
+      <div className="p-6">
+        <ActivityLogs projectId={projectId} />
+      </div>
     </div>
 
     {isOwner ? (
-      <div className="mt-16">
-        <div className="border border-red-500/20 rounded-lg bg-red-500/5 p-6">
-          <h2 className="text-xl font-bold text-red-500 mb-4">Danger Zone</h2>
-          <p className="text-neutral-400 mb-6">
-            Once you delete a project, there is no going back.
-          </p>
-          <button
-            onClick={handleDeleteProject}
-            className="px-4 py-3 bg-red-500 text-white rounded hover:bg-red-600 flex items-center gap-2"
-          >
-            <FaTrash />
-            Delete Project
-          </button>
+      <div className="mt-12">
+        <div className="border border-red-500/20 rounded-xl bg-gradient-to-r from-red-500/5 to-red-600/5 p-8">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+              <FaTrash className="w-5 h-5 text-red-500" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-red-500 mb-2">Delete Project</h2>
+              <p className="text-[var(--text-secondary)] mb-6 leading-relaxed">
+                Permanently delete this project and all its data. This action cannot be undone and will remove all boards, tasks, and project history.
+              </p>
+              <button
+                onClick={handleDeleteProject}
+                className="px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center gap-2 font-medium transition-colors"
+              >
+                <FaTrash className="w-4 h-4" />
+                Delete Project Forever
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     ) : (
-      <div className="mt-16">
-        <div className="border border-red-500/20 rounded-lg bg-red-500/5 p-6">
-          <h2 className="text-xl font-bold text-red-500 mb-4">Leave Project</h2>
-          <div className="space-y-4">
-            <div className="text-neutral-400 space-y-2">
-              <p>Before leaving the project, please note:</p>
-              <ul className="list-disc list-inside ml-2 space-y-1">
-                <li>You will lose access to all project boards and tasks</li>
-                <li>Your assigned tasks will be unassigned</li>
-                <li>You will need a new invitation to rejoin</li>
-              </ul>
+      <div className="mt-12">
+        <div className="border border-orange-500/20 rounded-xl bg-gradient-to-r from-orange-500/5 to-red-500/5 p-8">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-orange-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+              <FaUserMinus className="w-5 h-5 text-orange-500" />
             </div>
-            <button
-              onClick={handleLeaveProject}
-              className="px-4 py-3 bg-red-500 text-white rounded hover:bg-red-600 flex items-center gap-2"
-            >
-              <FaUserMinus />
-              Leave Project
-            </button>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-orange-500 mb-2">Leave Project</h2>
+              <div className="text-[var(--text-secondary)] mb-6 space-y-3">
+                <p className="leading-relaxed">
+                  Are you sure you want to leave this project? This action will:
+                </p>
+                <ul className="list-disc list-inside ml-4 space-y-1 text-sm">
+                  <li>Remove your access to all project boards and tasks</li>
+                  <li>Unassign you from all current tasks</li>
+                  <li>Require a new invitation to rejoin</li>
+                </ul>
+              </div>
+              <button
+                onClick={handleLeaveProject}
+                className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center gap-2 font-medium transition-colors"
+              >
+                <FaUserMinus className="w-4 h-4" />
+                Leave Project
+              </button>
+            </div>
           </div>
         </div>
       </div>
     )}
 
     <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)}>
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold text-[var(--text)]">Edit Project</h2>
+      <div className="space-y-8">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-[var(--accent)]/10 rounded-xl flex items-center justify-center">
+            <FaPen className="w-5 h-5 text-[var(--accent)]" />
+          </div>
+          <h2 className="text-2xl font-bold text-[var(--text)]">Edit Project</h2>
+        </div>
         
-        <div>
-          <label className="block text-sm text-[var(--text-secondary)] mb-2">Project Name</label>
-          <input
-            type="text"
-            value={editName}
-            onChange={(e) => setEditName(e.target.value)}
-            className={`w-full rounded border bg-neutral-900 p-2 text-[var(--text)] ${
-              error ? 'border-red-500' : 'border-[var(--border)] focus:border-blue-500'
-            }`}
-            placeholder="Enter project name"
-          />
-          {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-[var(--text)] mb-3">Project Name</label>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              className={`w-full rounded-lg border bg-[var(--background)] p-3 text-[var(--text)] focus:outline-none transition-colors ${
+                error ? 'border-red-500 focus:border-red-500' : 'border-[var(--border)] focus:border-[var(--accent)]'
+              }`}
+              placeholder="Enter project name"
+            />
+            {error && (
+              <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-sm text-red-400">{error}</p>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[var(--text)] mb-3">Project Icon</label>
+            <IconSelector
+              selectedIcon={editIcon}
+              setSelectedIcon={setEditIcon}
+            />
+          </div>
         </div>
 
-        <div>
-          <label className="block text-sm text-[var(--text-secondary)] mb-2">Project Icon</label>
-          <IconSelector
-            selectedIcon={editIcon}
-            setSelectedIcon={setEditIcon}
-          />
-        </div>
-
-        <div className="flex justify-end gap-2 pt-4">
+        <div className="flex justify-end gap-3 pt-6 border-t border-[var(--border)]">
           <button
             onClick={() => setShowEditModal(false)}
-            className="px-4 py-2 text-[var(--text-secondary)] hover:text-[var(--text)]"
+            className="px-6 py-2 text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--surface)] rounded-lg transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={() => handleUpdateProject({ name: editName, icon: editIcon })}
-            className="px-4 py-2 bg-[var(--accent)] text-white rounded hover:bg-[var(--accent-hover)]"
+            className="px-6 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] font-medium transition-colors"
           >
             Save Changes
           </button>
