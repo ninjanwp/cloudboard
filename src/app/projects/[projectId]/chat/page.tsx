@@ -527,7 +527,6 @@ export default function ProjectChatPage() {
                               email={senderGroup.sender}
                               className="ml-3 mt-0.5"
                               size="md"
-                              userUid={user?.uid}
                             />
                           )}
                         </div>

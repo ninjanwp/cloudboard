@@ -1,13 +1,13 @@
 "use client";
 
-import { Project } from "../../../context/ProjectContext";
+import { Project, ProjectMember } from "../../../context/ProjectContext";
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { useProject } from "../../../context/ProjectContext";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "../../../../../firebase";
-import { FaUserPlus, FaUserMinus, FaCrown, FaTrash } from "react-icons/fa6";
+import { FaUserPlus, FaUserMinus, FaCrown, FaTrash, FaShield, FaRobot, FaEye, FaEyeSlash, FaGear, FaMessage, FaCalendar } from "react-icons/fa6";
 import { useParams, useRouter } from 'next/navigation';
 import { IconSelector } from "../../../components/IconSelector";
 import * as FaIcons from "react-icons/fa6";
@@ -16,6 +16,8 @@ import { FaPen } from "react-icons/fa6";
 import { getUserDisplayName } from "../../../utils/userUtils";
 import { ActivityLogs } from "../../../components/ActivityLogs";
 import { UserAvatar } from "../../../components/UserAvatar";
+import { hasAdminAccess, getUserProjectRole, canRemoveMember, canPromoteMember, getDefaultNavigationPermissions } from "../../../utils/projectUtils";
+import type { NavigationPermissions, ProjectRole } from "../../../context/ProjectContext";
 
 export default function ProjectManagePage() {
   const params = useParams();
@@ -23,13 +25,25 @@ export default function ProjectManagePage() {
   const { user, inviteUserToProject, removeUserFromProject, deleteProject, leaveProject } = useAuth();
   const { currentProject, setCurrentProject } = useProject();
   const [members, setMembers] = useState<string[]>([]);
+  const [memberRoles, setMemberRoles] = useState<ProjectMember[]>([]);
   const [newMemberEmail, setNewMemberEmail] = useState("");
-  const [isOwner, setIsOwner] = useState(false);
+  const [hasAdminPermissions, setHasAdminPermissions] = useState(false);
+  const [userRole, setUserRole] = useState<string>("");
   const [error, setError] = useState("");
   const [showEditModal, setShowEditModal] = useState(false);
   const [editName, setEditName] = useState("");
   const [editIcon, setEditIcon] = useState("");
   const [memberDisplayNames, setMemberDisplayNames] = useState<{ [email: string]: string }>({});
+  
+  // API Key management
+  const [openAIApiKey, setOpenAIApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [savingApiKey, setSavingApiKey] = useState(false);
+  
+  // Navigation permissions
+  const [navigationPermissions, setNavigationPermissions] = useState<NavigationPermissions>(getDefaultNavigationPermissions());
+  const [savingNavPermissions, setSavingNavPermissions] = useState(false);
+  
   const router = useRouter();
 
   useEffect(() => {
@@ -39,7 +53,33 @@ export default function ProjectManagePage() {
       if (projectSnap.exists()) {
         const projectData = projectSnap.data() as Omit<Project, 'id'>;
         setMembers(projectData.members || []);
-        setIsOwner(projectData.owner === user?.uid);
+        
+        // Set up role-based permissions
+        if (user?.email) {
+          const adminAccess = hasAdminAccess({ ...projectData, id: projectId } as Project, user.email);
+          setHasAdminPermissions(adminAccess);
+          
+          const role = getUserProjectRole({ ...projectData, id: projectId } as Project, user.email);
+          setUserRole(role || "");
+          
+          // Check access - only owners and administrators can access this page
+          if (!adminAccess) {
+            router.replace(`/projects/${projectId}`);
+            return;
+          }
+        }
+        
+        // Load member roles if available
+        if (projectData.memberRoles) {
+          setMemberRoles(projectData.memberRoles);
+        }
+        
+        // Load API key
+        setOpenAIApiKey(projectData.openAIApiKey || "");
+        
+        // Load navigation permissions
+        setNavigationPermissions(projectData.navigationPermissions || getDefaultNavigationPermissions());
+        
         const fullProject: Project = {
           id: projectId,
           name: projectData.name,
@@ -48,8 +88,11 @@ export default function ProjectManagePage() {
             m === projectData.members[0]  // First member is always the owner
           ) || '',
           members: projectData.members || [],
-          createdAt: projectData.createdAt, // Keep as Timestamp instead of converting to string
-          icon: projectData.icon
+          memberRoles: projectData.memberRoles,
+          createdAt: projectData.createdAt,
+          icon: projectData.icon,
+          openAIApiKey: projectData.openAIApiKey,
+          navigationPermissions: projectData.navigationPermissions
         };
         setCurrentProject(fullProject);
 
@@ -63,7 +106,7 @@ export default function ProjectManagePage() {
     };
 
     fetchProjectDetails();
-  }, [projectId, user, setCurrentProject]);
+  }, [projectId, user, setCurrentProject, router]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +124,143 @@ export default function ProjectManagePage() {
     }
   };
 
+  const handleSaveApiKey = async () => {
+    setSavingApiKey(true);
+    try {
+      const projectRef = doc(db, "projects", projectId);
+      await updateDoc(projectRef, {
+        openAIApiKey: openAIApiKey
+      });
+      setError("");
+    } catch (err) {
+      setError("Failed to save API key");
+      console.error("Save API key error:", err);
+    }
+    setSavingApiKey(false);
+  };
+
+  const handleSaveNavigationPermissions = async () => {
+    setSavingNavPermissions(true);
+    try {
+      const projectRef = doc(db, "projects", projectId);
+      await updateDoc(projectRef, {
+        navigationPermissions: navigationPermissions
+      });
+      
+      // Update the current project context
+      if (currentProject) {
+        setCurrentProject({
+          ...currentProject,
+          navigationPermissions: navigationPermissions
+        });
+      }
+      
+      setError("");
+    } catch (err) {
+      setError("Failed to save navigation permissions");
+      console.error("Save navigation permissions error:", err);
+    }
+    setSavingNavPermissions(false);
+  };
+
+  const handlePermissionChange = (navItem: string, role: ProjectRole, checked: boolean) => {
+    setNavigationPermissions(prev => {
+      const newPermissions = { ...prev };
+      if (!newPermissions[navItem]) {
+        newPermissions[navItem] = [];
+      }
+      
+      if (checked) {
+        if (!newPermissions[navItem].includes(role)) {
+          newPermissions[navItem] = [...newPermissions[navItem], role];
+        }
+      } else {
+        newPermissions[navItem] = newPermissions[navItem].filter(r => r !== role);
+      }
+      
+      return newPermissions;
+    });
+  };
+
+  const handlePromoteMember = async (email: string) => {
+    if (!currentProject || !user?.email) return;
+    
+    if (!canPromoteMember(currentProject, user.email, email)) {
+      setError("You don't have permission to promote this member");
+      return;
+    }
+
+    try {
+      const projectRef = doc(db, "projects", projectId);
+      
+      // Initialize memberRoles if it doesn't exist
+      let updatedMemberRoles = currentProject.memberRoles || [];
+      
+      // If no memberRoles, create from existing members
+      if (!currentProject.memberRoles) {
+        updatedMemberRoles = currentProject.members.map(member => ({
+          email: member,
+          role: member === currentProject.ownerEmail ? "owner" : "member",
+          joinedAt: new Date().toISOString()
+        }));
+      }
+      
+      // Update the specific member's role
+      updatedMemberRoles = updatedMemberRoles.map(member => 
+        member.email === email 
+          ? { ...member, role: "administrator" as const }
+          : member
+      );
+      
+      await updateDoc(projectRef, {
+        memberRoles: updatedMemberRoles
+      });
+      
+      setMemberRoles(updatedMemberRoles);
+      setError("");
+    } catch (err) {
+      setError("Failed to promote member");
+      console.error("Promote member error:", err);
+    }
+  };
+
+  const handleDemoteMember = async (email: string) => {
+    if (!currentProject || !user?.email) return;
+    
+    if (getUserProjectRole(currentProject, user.email) !== "owner") {
+      setError("Only owners can demote administrators");
+      return;
+    }
+
+    try {
+      const projectRef = doc(db, "projects", projectId);
+      
+      const updatedMemberRoles = (currentProject.memberRoles || []).map(member => 
+        member.email === email 
+          ? { ...member, role: "member" as const }
+          : member
+      );
+      
+      await updateDoc(projectRef, {
+        memberRoles: updatedMemberRoles
+      });
+      
+      setMemberRoles(updatedMemberRoles);
+      setError("");
+    } catch (err) {
+      setError("Failed to demote member");
+      console.error("Demote member error:", err);
+    }
+  };
+
   const handleRemoveMember = async (email: string) => {
+    if (!currentProject || !user?.email) return;
+    
+    if (!canRemoveMember(currentProject, user.email, email)) {
+      setError("You don't have permission to remove this member");
+      return;
+    }
+    
     if (window.confirm(`Are you sure you want to remove ${email} from the project?`)) {
       try {
         await removeUserFromProject(projectId, email);
@@ -143,6 +322,11 @@ export default function ProjectManagePage() {
     }
   };
 
+  const getMemberRole = (email: string): string => {
+    if (!currentProject) return "member";
+    return getUserProjectRole(currentProject, email) || "member";
+  };
+
   const IconComponent = currentProject?.icon 
     ? (FaIcons as Record<string, React.ComponentType>)[currentProject.icon] 
     : FaIcons.FaStar;
@@ -157,7 +341,7 @@ export default function ProjectManagePage() {
             <div 
               className="flex items-center gap-6 group cursor-pointer"
               onClick={() => {
-                if (isOwner) {
+                if (hasAdminPermissions) {
                   setEditName(currentProject.name);
                   setEditIcon(currentProject.icon || "FaStar");
                   setShowEditModal(true);
@@ -168,7 +352,7 @@ export default function ProjectManagePage() {
                 <div className="w-16 h-16 flex items-center justify-center bg-gradient-to-br from-[var(--accent)]/10 to-[var(--accent)]/5 rounded-2xl border-2 border-[var(--accent)]/20">
                   <IconComponent className="w-8 h-8 text-[var(--accent)]" />
                 </div>
-                {isOwner && (
+                {hasAdminPermissions && (
                   <div className="absolute -bottom-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="w-6 h-6 bg-[var(--accent)] rounded-full flex items-center justify-center">
                       <FaPen className="w-3 h-3 text-white" />
@@ -180,11 +364,11 @@ export default function ProjectManagePage() {
                 <h1 className="text-3xl font-bold text-[var(--text)] mb-1">{currentProject.name}</h1>
                 <p className="text-[var(--text-secondary)] flex items-center gap-2">
                   <span>Project Management</span>
-                  {isOwner && (
+                  {userRole && (
                     <>
                       <span>•</span>
                       <span className="text-xs bg-[var(--accent)]/10 text-[var(--accent)] px-2 py-1 rounded-full font-medium">
-                        Owner
+                        {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
                       </span>
                     </>
                   )}
@@ -195,7 +379,119 @@ export default function ProjectManagePage() {
         </div>
       </div>
 
-      {isOwner && (
+      {/* API Key Management Section */}
+      {hasAdminPermissions && (
+        <div className="mb-8 bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6">
+          <h3 className="text-lg font-semibold text-[var(--text)] mb-4 flex items-center gap-2">
+            <FaRobot className="text-[var(--accent)]" />
+            AI Assistant Configuration
+          </h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--text)] mb-2">OpenAI API Key</label>
+              <div className="relative">
+                <input
+                  type={showApiKey ? "text" : "password"}
+                  value={openAIApiKey}
+                  onChange={(e) => setOpenAIApiKey(e.target.value)}
+                  className="w-full p-3 pr-20 border border-[var(--border)] rounded-lg bg-[var(--background)] text-[var(--text)] focus:border-[var(--accent)] outline-none"
+                  placeholder="sk-..."
+                />
+                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="p-1 hover:bg-[var(--surface-hover)] rounded"
+                  >
+                    {showApiKey ? <FaEyeSlash className="text-[var(--text-secondary)]" /> : <FaEye className="text-[var(--text-secondary)]" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveApiKey}
+                    disabled={savingApiKey}
+                    className="px-3 py-1 bg-[var(--accent)] text-white rounded text-sm hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+                  >
+                    {savingApiKey ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-[var(--text-secondary)] mt-1">
+                Project-specific API key for AI assistant features. Get your key from{" "}
+                <a 
+                  href="https://platform.openai.com/api-keys" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[var(--accent)] hover:underline"
+                >
+                  OpenAI Platform
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Navigation Permissions Section */}
+      {hasAdminPermissions && (
+        <div className="mb-8 bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-[var(--text)] flex items-center gap-2">
+              <FaGear className="text-[var(--accent)]" />
+              Navigation Permissions
+            </h3>
+            <button
+              onClick={handleSaveNavigationPermissions}
+              disabled={savingNavPermissions}
+              className="px-4 py-2 bg-[var(--accent)] text-white rounded-lg text-sm hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+            >
+              {savingNavPermissions ? "Saving..." : "Save Permissions"}
+            </button>
+          </div>
+          <p className="text-sm text-[var(--text-secondary)] mb-6">
+            Control which team roles can access different sections of the project. Board access is always available to all members.
+          </p>
+          
+          <div className="space-y-4">
+            {[
+              { key: "manage", label: "Manage", icon: <FaGear className="w-4 h-4" />, description: "Project settings, member management, and permissions" },
+              { key: "chat", label: "Chat", icon: <FaMessage className="w-4 h-4" />, description: "Team communication and discussions" },
+              { key: "calendar", label: "Calendar", icon: <FaCalendar className="w-4 h-4" />, description: "Project timeline and scheduling" },
+            ].map((navItem) => (
+              <div key={navItem.key} className="bg-[var(--background)] rounded-lg p-4 border border-[var(--border)]">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center">
+                    {navItem.icon}
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-[var(--text)]">{navItem.label}</h4>
+                    <p className="text-xs text-[var(--text-secondary)]">{navItem.description}</p>
+                  </div>
+                </div>
+                
+                <div className="flex gap-6 ml-11">
+                  {(["owner", "administrator", "member"] as ProjectRole[]).map((role) => (
+                    <label key={role} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={role === "owner" || navigationPermissions[navItem.key]?.includes(role) || false}
+                        onChange={(e) => handlePermissionChange(navItem.key, role, e.target.checked)}
+                        disabled={role === "owner"} // Owners always have access
+                        className="w-4 h-4 text-[var(--accent)] border-2 border-[var(--border)] rounded focus:ring-[var(--accent)] focus:ring-2 disabled:opacity-50"
+                      />
+                      <span className={`text-sm capitalize ${role === "owner" ? "text-[var(--text-secondary)]" : "text-[var(--text)]"}`}>
+                        {role}
+                        {role === "owner" && <span className="text-xs ml-1">(always)</span>}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasAdminPermissions && (
         <div className="mb-8 bg-[var(--surface)] rounded-xl border border-[var(--border)] p-6">
           <h3 className="text-lg font-semibold text-[var(--text)] mb-4 flex items-center gap-2">
             <FaUserPlus className="text-[var(--accent)]" />
@@ -240,7 +536,7 @@ export default function ProjectManagePage() {
         </h2>
       </div>
       <div className="divide-y divide-[var(--border)]">
-        {members.map((member, index) => (
+        {members.map((member) => (
           <div
             key={member}
             className="flex items-center justify-between p-6 hover:bg-[var(--background)]/50 transition-colors"
@@ -263,6 +559,12 @@ export default function ProjectManagePage() {
                       Owner
                     </div>
                   )}
+                  {getMemberRole(member) === "administrator" && member !== members[0] && (
+                    <div className="flex items-center gap-1 px-2 py-1 bg-purple-500/10 text-purple-500 rounded-full text-xs font-medium">
+                      <FaShield className="w-3 h-3" />
+                      Administrator
+                    </div>
+                  )}
                   {member === user?.email && (
                     <div className="px-2 py-1 bg-[var(--accent)]/10 text-[var(--accent)] rounded-full text-xs font-medium">
                       You
@@ -272,16 +574,41 @@ export default function ProjectManagePage() {
                 <span className="text-sm text-[var(--text-secondary)]">{member}</span>
               </div>
             </div>
-            {isOwner && member !== user?.email && (
-              <button
-                onClick={() => handleRemoveMember(member)}
-                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-lg flex items-center gap-2 transition-colors"
-                title={`Remove ${memberDisplayNames[member] || member} from project`}
-              >
-                <FaUserMinus className="w-4 h-4" />
-                <span className="text-sm font-medium">Remove</span>
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {/* Role management buttons */}
+              {currentProject && user?.email && canPromoteMember(currentProject, user.email, member) && getMemberRole(member) === "member" && (
+                <button
+                  onClick={() => handlePromoteMember(member)}
+                  className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 p-2 rounded-lg flex items-center gap-2 transition-colors"
+                  title={`Promote ${memberDisplayNames[member] || member} to Administrator`}
+                >
+                  <FaShield className="w-4 h-4" />
+                  <span className="text-sm font-medium">Promote</span>
+                </button>
+              )}
+              
+              {currentProject && user?.email && getUserProjectRole(currentProject, user.email) === "owner" && getMemberRole(member) === "administrator" && (
+                <button
+                  onClick={() => handleDemoteMember(member)}
+                  className="text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 p-2 rounded-lg flex items-center gap-2 transition-colors"
+                  title={`Demote ${memberDisplayNames[member] || member} to Member`}
+                >
+                  <FaUserMinus className="w-4 h-4" />
+                  <span className="text-sm font-medium">Demote</span>
+                </button>
+              )}
+              
+              {currentProject && user?.email && canRemoveMember(currentProject, user.email, member) && (
+                <button
+                  onClick={() => handleRemoveMember(member)}
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-2 rounded-lg flex items-center gap-2 transition-colors"
+                  title={`Remove ${memberDisplayNames[member] || member} from project`}
+                >
+                  <FaUserMinus className="w-4 h-4" />
+                  <span className="text-sm font-medium">Remove</span>
+                </button>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -296,7 +623,7 @@ export default function ProjectManagePage() {
           Recent Activity
         </h2>
         <p className="text-sm text-[var(--text-secondary)] mt-1">
-          Track what's happening in your project
+          Track what&apos;s happening in your project
         </p>
       </div>
       <div className="p-6">
@@ -304,7 +631,7 @@ export default function ProjectManagePage() {
       </div>
     </div>
 
-    {isOwner ? (
+    {userRole === "owner" ? (
       <div className="mt-12">
         <div className="border border-red-500/20 rounded-xl bg-gradient-to-r from-red-500/5 to-red-600/5 p-8">
           <div className="flex items-start gap-4">

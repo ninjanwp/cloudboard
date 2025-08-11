@@ -25,6 +25,7 @@ import { useAuth } from "../context/AuthContext";
 import classNames from "classnames";
 import { FaLink } from "react-icons/fa6";
 import { getUserDisplayName } from "../utils/userUtils";
+import { batchGetUserData, preloadProjectUsers } from "../utils/userCache";
 import { createLog } from "../utils/logUtils";
 import { UserAvatar } from "./UserAvatar";
 
@@ -104,6 +105,7 @@ const Board = ({
   boardId: string;
 }) => {
   const [cards, setCards] = useState<CardType[]>([]);
+  const [showAddTask, setShowAddTask] = useState(false);
 
   useEffect(() => {
     const cardsRef = collection(
@@ -121,6 +123,16 @@ const Board = ({
 
     return () => unsubscribe();
   }, [projectId, boardId]);
+
+  // Listen for toolbar add task event
+  useEffect(() => {
+    const handleAddTaskEvent = () => {
+      setShowAddTask(true);
+    };
+
+    window.addEventListener('openAddTaskModal', handleAddTaskEvent);
+    return () => window.removeEventListener('openAddTaskModal', handleAddTaskEvent);
+  }, []);
 
   const updateCard = async (cardId: string, data: Partial<CardType>) => {
     try {
@@ -197,15 +209,17 @@ const Board = ({
         </div>
       </div>
       
-      {/* Floating Add Task Button */}
-      <div className="absolute bottom-6 right-6">
+      {/* Hidden AddCard component that can be triggered from toolbar */}
+      {showAddTask && (
         <AddCard
           column="backlog"
           cards={cards}
           projectId={projectId}
           boardId={boardId}
+          autoOpen={true}
+          onClose={() => setShowAddTask(false)}
         />
-      </div>
+      )}
     </div>
   );
 };
@@ -381,7 +395,8 @@ const Column = ({
     });
 
   return (
-    <div className="flex-grow w-56 shrink-0 px-2">
+    <div className="flex-grow w-56 shrink-0 px-2 relative">
+      
       <div className="mb-3 flex items-center justify-between gap-2 rounded-xl bg-[var(--surface)] border border-[var(--border)] p-3 shadow-sm">
         <div className="flex items-center gap-3">
           <span className="rounded-lg bg-[var(--accent)] text-white font-mono px-2 py-1 text-sm font-bold min-w-[28px] text-center">
@@ -395,7 +410,7 @@ const Column = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={classNames(
-          "min-h-[400px] w-full transition-all duration-200 rounded-xl border-2 border-dashed p-3",
+          "min-h-[400px] h-full w-full transition-all duration-900 rounded-xl border-2 border-dashed p-",
           active
             ? "border-[var(--accent)] bg-[var(--accent)]/5"
             : "border-transparent"
@@ -509,11 +524,15 @@ const Card = ({ ...props }: CardProps) => {
   
   useEffect(() => {
     const loadDisplayNames = async () => {
-      const names: { [email: string]: string } = {};
-      for (const member of projectMembers) {
-        names[member] = await getUserDisplayName(member);
+      if (projectMembers.length > 0) {
+        const userDataMap = await batchGetUserData(projectMembers);
+        const names: { [email: string]: string } = {};
+        projectMembers.forEach(member => {
+          const user = userDataMap.get(member);
+          names[member] = user?.displayName || member;
+        });
+        setUserDisplayNames(names);
       }
-      setUserDisplayNames(names);
     };
     loadDisplayNames();
   }, [projectMembers]);
@@ -666,9 +685,12 @@ type AddCardProps = {
   cards: CardType[];
   projectId: string; // Add this
   boardId: string; // Add this
+  variant?: "floating" | "toolbar"; // Add variant support
+  autoOpen?: boolean; // Add auto-open support
+  onClose?: () => void; // Add close callback for auto-open mode
 };
 
-const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
+const AddCard = ({ column, cards, projectId, boardId, variant = "floating", autoOpen = false, onClose }: AddCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [text, setText] = useState("");
   const [description, setDescription] = useState("");
@@ -687,6 +709,13 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
     };
     fetchProjectMembers();
   }, [projectId]);
+
+  // Auto-open modal if autoOpen is true
+  useEffect(() => {
+    if (autoOpen) {
+      setIsModalOpen(true);
+    }
+  }, [autoOpen]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -752,24 +781,37 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
       setText("");
       setDescription("");
       setDuration(60);
+      if (onClose) onClose(); // Call the callback if provided
     } catch (error) {
       console.error("Error adding card:", error);
     }
   };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    if (onClose) onClose(); // Call the callback if provided
+  };
+
   return (
     <>
-      <motion.button
-        layout
-        onClick={() => setIsModalOpen(true)}
-        className="flex items-center gap-3 px-6 py-4 bg-[var(--accent)] text-white rounded-xl hover:bg-[var(--accent-hover)] transition-all duration-200 font-medium shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-      >
-        <FiPlus className="w-5 h-5" />
-        <span>New Task</span>
-      </motion.button>
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
+      {/* Only show button if not auto-opened */}
+      {!autoOpen && (
+        <motion.button
+          layout
+          onClick={() => setIsModalOpen(true)}
+          className={
+            variant === "toolbar"
+              ? "flex items-center gap-2 px-3 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-all duration-200 font-medium"
+              : "flex items-center gap-3 px-6 py-4 bg-[var(--accent)] text-white rounded-xl hover:bg-[var(--accent-hover)] transition-all duration-200 font-medium shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
+          }
+          whileHover={variant === "floating" ? { scale: 1.05 } : {}}
+          whileTap={variant === "floating" ? { scale: 0.95 } : {}}
+        >
+          <FiPlus className={variant === "toolbar" ? "w-4 h-4" : "w-5 h-5"} />
+          <span className={variant === "toolbar" ? "text-sm" : ""}>New Task</span>
+        </motion.button>
+      )}
+      <Modal isOpen={isModalOpen} onClose={handleCloseModal}>
         <form
           onSubmit={handleSubmit}
           className="space-y-6 max-h-[80vh] overflow-y-auto"
@@ -868,7 +910,7 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
           <div className="flex gap-3 pt-4 border-t border-[var(--border)]">
             <button
               type="button"
-              onClick={() => setIsModalOpen(false)}
+              onClick={handleCloseModal}
               className="flex-1 px-4 py-3 border border-[var(--border)] text-[var(--text)] rounded-lg hover:bg-[var(--surface)] transition-colors font-medium"
             >
               Cancel
@@ -885,6 +927,9 @@ const AddCard = ({ column, cards, projectId, boardId }: AddCardProps) => {
     </>
   );
 };
+
+// Export AddCard for use in other components
+export { AddCard };
 
 type ColumnType = "backlog" | "todo" | "doing" | "done";
 type Age = "recent" | "aging" | "stale";
@@ -945,11 +990,15 @@ const TaskAssignment = ({
   
   useEffect(() => {
     const loadDisplayNames = async () => {
-      const names: { [email: string]: string } = {};
-      for (const member of projectMembers) {
-        names[member] = await getUserDisplayName(member);
+      if (projectMembers.length > 0) {
+        const userDataMap = await batchGetUserData(projectMembers);
+        const names: { [email: string]: string } = {};
+        projectMembers.forEach(member => {
+          const user = userDataMap.get(member);
+          names[member] = user?.displayName || member;
+        });
+        setUserDisplayNames(names);
       }
-      setUserDisplayNames(names);
     };
     loadDisplayNames();
   }, [projectMembers]);

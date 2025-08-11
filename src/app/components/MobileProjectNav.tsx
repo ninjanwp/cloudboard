@@ -1,13 +1,16 @@
 "use client";
 
 import { useProject } from "../context/ProjectContext";
+import { useAuth } from "../context/AuthContext";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { FaClipboardList, FaGear, FaMessage, FaCalendar } from "react-icons/fa6";
 import { motion } from "framer-motion";
+import { canAccessNavigation } from "../utils/projectUtils";
 
 export const MobileProjectNav = () => {
   const { currentProject } = useProject();
+  const { user } = useAuth();
   const pathname = usePathname();
 
   // Hide the navigation if not on a project page or no project is selected
@@ -15,28 +18,38 @@ export const MobileProjectNav = () => {
 
   const projectId = currentProject.id;
 
-  const routes = [
+  const allRoutes = [
     {
       href: `/projects/${projectId}`,
       icon: <FaClipboardList size={20} />,
       label: "Board",
+      permission: "board",
     },
     {
       href: `/projects/${projectId}/calendar`,
       icon: <FaCalendar size={20} />,
       label: "Calendar",
+      permission: "calendar",
     },
     {
       href: `/projects/${projectId}/chat`,
       icon: <FaMessage size={20} />,
       label: "Chat",
+      permission: "chat",
     },
     {
       href: `/projects/${projectId}/manage`,
       icon: <FaGear size={20} />,
       label: "Manage",
+      permission: "manage",
     },
   ];
+
+  // Filter routes based on user permissions
+  const routes = allRoutes.filter(route => {
+    if (route.permission === "board") return true; // Board is always accessible
+    return canAccessNavigation(currentProject, user?.email || "", route.permission);
+  });
 
   const isActive = (path: string) => pathname === path;
 

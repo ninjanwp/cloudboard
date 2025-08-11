@@ -75,6 +75,8 @@ const AuthContext = createContext<AuthContextType>({
   cleanupUserAssignments: async () => {},
 });
 
+import { getDefaultNavigationPermissions } from "../utils/projectUtils";
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);  // Add this
@@ -159,6 +161,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       icon,
       owner: user.uid,
       members: [user.email],
+      memberRoles: [
+        {
+          email: user.email || "",
+          role: "owner",
+          joinedAt: new Date().toISOString()
+        }
+      ],
+      navigationPermissions: getDefaultNavigationPermissions(),
       createdAt: new Date().toISOString(),
     });
   };
@@ -213,9 +223,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Then update the project members
       const projectRef = doc(db, "projects", invitation.projectId);
-      await updateDoc(projectRef, {
-        members: arrayUnion(user.email),
-      });
+      
+      // Get current project data to update memberRoles
+      const projectSnap = await getDoc(projectRef);
+      if (projectSnap.exists()) {
+        const projectData = projectSnap.data();
+        const currentMemberRoles = projectData.memberRoles || [];
+        
+        const updatedMemberRoles = [
+          ...currentMemberRoles,
+          {
+            email: user.email || "",
+            role: "member",
+            joinedAt: new Date().toISOString()
+          }
+        ];
+        
+        await updateDoc(projectRef, {
+          members: arrayUnion(user.email),
+          memberRoles: updatedMemberRoles
+        });
+      } else {
+        // Fallback for older projects without memberRoles
+        await updateDoc(projectRef, {
+          members: arrayUnion(user.email),
+        });
+      }
 
       console.log("Successfully accepted invitation");
     } catch (error) {

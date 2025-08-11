@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { getUserAvatarSettings, getUserAvatarSettingsByEmail, getAvatarColor, getAvatarText, AvatarSettings } from "../utils/avatarUtils";
-import { getUserPhotoURL } from "../utils/userUtils";
-import { useAuth } from "../context/AuthContext";
+import { getUserData, UserData } from "../utils/userCache";
+import { getAvatarColor, getAvatarText } from "../utils/avatarUtils";
 
 interface UserAvatarProps {
   email: string;
@@ -12,25 +11,23 @@ interface UserAvatarProps {
   photoURL?: string;
   size?: "xs" | "sm" | "md" | "lg";
   className?: string;
-  userUid?: string; // Optional UID for settings lookup
+  cropX?: number; // Crop offset X as percentage (0-100)
+  cropY?: number; // Crop offset Y as percentage (0-100)
+  cropZoom?: number; // Zoom level (1-3)
 }
 
 export const UserAvatar: React.FC<UserAvatarProps> = ({ 
   email, 
-  displayName, 
-  photoURL, 
+  displayName: propDisplayName, 
+  photoURL: propPhotoURL, 
   size = "sm",
   className = "",
-  userUid
+  cropX = 50,
+  cropY = 50,
+  cropZoom = 1
 }) => {
-  const { user } = useAuth();
-  const [avatarSettings, setAvatarSettings] = useState<AvatarSettings>({
-    style: "monogram",
-    color: "auto",
-    showFullName: false,
-    useCustomColor: false
-  });
-  const [userPhotoURL, setUserPhotoURL] = useState<string | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const sizeClasses = {
     xs: "w-4 h-4 text-xs",
@@ -40,56 +37,100 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   };
 
   useEffect(() => {
-    const loadAvatarSettings = async () => {
-      // Use provided userUid or current user's UID if this is the current user's avatar
-      const uid = userUid || (email === user?.email ? user?.uid : null);
-      
-      if (uid) {
-        const settings = await getUserAvatarSettings(uid);
-        setAvatarSettings(settings);
-      } else {
-        // Fallback to email-based lookup for other users
-        const settings = await getUserAvatarSettingsByEmail(email);
-        setAvatarSettings(settings);
-      }
-    };
-    loadAvatarSettings();
-  }, [email, user?.email, user?.uid, userUid]);
+    let mounted = true;
 
-  useEffect(() => {
-    const loadPhotoURL = async () => {
-      if (avatarSettings.style === "photo") {
-        if (photoURL) {
-          setUserPhotoURL(photoURL);
-        } else {
-          // Fetch from Firebase if not provided
-          const fetchedPhotoURL = await getUserPhotoURL(email);
-          setUserPhotoURL(fetchedPhotoURL);
+    const loadUserData = async () => {
+      try {
+        const data = await getUserData(email);
+        if (mounted) {
+          setUserData(data);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+        if (mounted) {
+          // Fallback to props or email
+          setUserData({
+            email,
+            displayName: propDisplayName || email,
+            photoURL: propPhotoURL,
+            avatarSettings: {
+              style: "monogram",
+              color: "auto",
+              showFullName: false,
+              useCustomColor: false,
+              cropX: 50,
+              cropY: 50,
+              cropZoom: 1
+            }
+          });
+          setLoading(false);
         }
       }
     };
-    loadPhotoURL();
-  }, [email, photoURL, avatarSettings.style]);
+
+    loadUserData();
+
+    return () => {
+      mounted = false;
+    };
+  }, [email, propDisplayName, propPhotoURL]);
+
+  // Show loading state with a consistent placeholder to prevent flickering
+  if (loading || !userData) {
+    const fallbackColor = getAvatarColor(email, "auto");
+    const fallbackText = propDisplayName 
+      ? getAvatarText(propDisplayName, email, "monogram")
+      : email.charAt(0).toUpperCase();
+
+    return (
+      <div className={`${sizeClasses[size]} ${fallbackColor} text-white font-medium rounded-full flex items-center justify-center shrink-0 ${className} opacity-70 animate-pulse`}>
+        {fallbackText}
+      </div>
+    );
+  }
+
+  const { avatarSettings, photoURL, displayName } = userData;
+  const finalDisplayName = displayName || propDisplayName || email;
+  const finalPhotoURL = photoURL || propPhotoURL;
+
+  // Use crop settings from avatar settings if available, otherwise use props
+  const finalCropX = avatarSettings?.cropX ?? cropX;
+  const finalCropY = avatarSettings?.cropY ?? cropY;
+  const finalCropZoom = avatarSettings?.cropZoom ?? cropZoom;
 
   // If photo style is selected and photoURL is available, use photo
-  if (avatarSettings.style === "photo" && userPhotoURL) {
+  if (avatarSettings?.style === "photo" && finalPhotoURL) {
+    const sizePixels = parseInt(sizeClasses[size].split(' ')[0].replace('w-', '')) * 4;
+    
     return (
       <div className={`${sizeClasses[size]} rounded-full overflow-hidden relative shrink-0 ${className}`}>
-        <Image
-          src={userPhotoURL}
-          alt={`${displayName || email}'s avatar`}
-          width={parseInt(sizeClasses[size].split(' ')[0].replace('w-', '')) * 4}
-          height={parseInt(sizeClasses[size].split(' ')[0].replace('w-', '')) * 4}
-          className="object-cover"
-          unoptimized
-        />
+        <div 
+          className="w-full h-full relative"
+          style={{
+            transform: `scale(${finalCropZoom})`,
+            transformOrigin: `${finalCropX}% ${finalCropY}%`
+          }}
+        >
+          <Image
+            src={finalPhotoURL}
+            alt={`${finalDisplayName}'s avatar`}
+            width={sizePixels}
+            height={sizePixels}
+            className="object-cover w-full h-full"
+            style={{
+              objectPosition: `${finalCropX}% ${finalCropY}%`
+            }}
+            unoptimized
+          />
+        </div>
       </div>
     );
   }
 
   // Use text-based avatar (monogram or initials)
-  const colorClass = getAvatarColor(email, avatarSettings.color);
-  const text = getAvatarText(displayName, email, avatarSettings.style);
+  const colorClass = getAvatarColor(email, avatarSettings?.color || "auto");
+  const text = getAvatarText(finalDisplayName, email, avatarSettings?.style || "monogram");
 
   return (
     <div className={`${sizeClasses[size]} ${colorClass} text-white font-medium rounded-full flex items-center justify-center shrink-0 ${className}`}>

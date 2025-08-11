@@ -8,6 +8,7 @@ import { collection, onSnapshot, addDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { useAuth } from "../context/AuthContext";
 import { getUserDisplayName } from "../utils/userUtils";
+import { batchGetUserData, preloadProjectUsers } from "../utils/userCache";
 import { UserAvatar } from "./UserAvatar";
 
 type CalendarTask = {
@@ -70,26 +71,31 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
         }
       });
 
-      // Load display names for emails we don't have cached
-      const newDisplayNames: {[email: string]: string} = {};
-      
-      for (const email of uniqueEmails) {
-        if (!userDisplayNames[email]) {
-          const displayName = await getUserDisplayName(email);
-          newDisplayNames[email] = displayName;
-        }
-      }
+      // Use batch loading to get all user data at once
+      if (uniqueEmails.size > 0) {
+        const emailArray = Array.from(uniqueEmails);
+        const userDataMap = await batchGetUserData(emailArray);
+        
+        const newDisplayNames: {[email: string]: string} = {};
+        emailArray.forEach((email) => {
+          const user = userDataMap.get(email);
+          if (user) {
+            newDisplayNames[email] = user.displayName || email;
+          }
+        });
 
-      // Update state with new display names
-      if (Object.keys(newDisplayNames).length > 0) {
-        setUserDisplayNames(prev => ({ ...prev, ...newDisplayNames }));
+        // Only update if we have new data to avoid infinite loops
+        const hasNewData = emailArray.some(email => !userDisplayNames[email]);
+        if (hasNewData) {
+          setUserDisplayNames(prev => ({ ...prev, ...newDisplayNames }));
+        }
       }
     };
 
     if (tasks.length > 0) {
       loadDisplayNames();
     }
-  }, [tasks, userDisplayNames]);
+  }, [tasks.length]); // Changed dependency to tasks.length to avoid infinite loops
 
     // Create task function
   const createTask = async (taskData: {

@@ -11,12 +11,36 @@ export type ThemeColor = {
   mode: 'dark' | 'light';  // Add this to determine text colors
 };
 
-export type ThemeName = 'dark' | 'navy' | 'forest' | 'purple' | 'pink' | 'midnight' | 'coral' | 'amber' | 'mint' | 'coffee' | 'sky';
+export type ThemeName = 'dark' | 'light' | 'mono' | 'navy' | 'forest' | 'purple' | 'pink' | 'midnight' | 'coral' | 'amber' | 'mint' | 'coffee' | 'sky';
 
 export const themes: Record<ThemeName, ThemeColor> = {
   dark: {
     background: '#171717', // neutral-900
     surface: '#262626',    // neutral-800
+    surfaceHover: '#333333',
+    border: '#404040',
+    borderHover: '#525252',
+    text: '#ffffff',
+    textSecondary: '#a3a3a3',
+    accent: '#3b82f6',    // blue-500
+    accentHover: '#2563eb', // blue-600
+    mode: 'dark'
+  },
+  light: {
+    background: '#ffffff', // neutral-100
+    surface: '#fbfbfb',    // neutral-200
+    surfaceHover: '#f3f4f6',
+    border: '#e5e7eb',
+    borderHover: '#d1d5db',
+    text: '#1f1f1f',
+    textSecondary: '#8c7a80',
+    accent: '#3b82f6',    // blue-500
+    accentHover: '#2563eb', // blue-600
+    mode: 'light'
+  },
+    mono: {
+    background: '#000000', // neutral-900
+    surface: '#000000',    // neutral-800
     surfaceHover: '#333333',
     border: '#404040',
     borderHover: '#525252',

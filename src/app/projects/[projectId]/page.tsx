@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { CustomKanban } from '../../components/CustomKanban';
 import { LoadingScreen } from '../../components/LoadingScreen';
 import { useAuth } from '../../context/AuthContext';
+import { preloadProjectUsers } from '../../utils/userCache';
 import { db } from '../../../../firebase';
 import { 
   doc, 
@@ -35,6 +36,9 @@ export default function ProjectPage() {
           setLoading(false);
           return;
         }
+
+        // Preload user data for all project members
+        preloadProjectUsers(projectId as string);
 
         // Get the first board or create a default one
         const boardsRef = collection(db, `projects/${projectId}/boards`);

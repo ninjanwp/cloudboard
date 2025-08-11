@@ -9,13 +9,19 @@ export interface AvatarSettings {
   color: AvatarColor;
   showFullName: boolean;
   useCustomColor: boolean;
+  cropX?: number; // Crop offset X as percentage (0-100)
+  cropY?: number; // Crop offset Y as percentage (0-100)
+  cropZoom?: number; // Zoom level (1-3)
 }
 
 const defaultAvatarSettings: AvatarSettings = {
   style: "monogram",
   color: "auto",
   showFullName: false,
-  useCustomColor: false
+  useCustomColor: false,
+  cropX: 50,
+  cropY: 50,
+  cropZoom: 1
 };
 
 // Cache for avatar settings

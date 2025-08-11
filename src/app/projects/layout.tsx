@@ -6,7 +6,7 @@ import { Header } from "../components/Header";
 import { ProjectNav } from "../components/ProjectNav";
 import { MobileProjectNav } from "../components/MobileProjectNav";
 import { useAuth } from "../context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { FiMenu } from "react-icons/fi";
 import { LoadingScreen } from "../components/LoadingScreen";
 import { ContentContainer } from "../components/ContentContainer";
@@ -20,7 +20,11 @@ export default function ProjectsLayout({
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const { user, loading } = useAuth();
   const router = useRouter();
+  const params = useParams();
   const [isMobile, setIsMobile] = useState(false);
+
+  // Get projectId from params
+  const projectId = params?.projectId as string;
 
   // Check if on mobile device
   useEffect(() => {
@@ -52,8 +56,9 @@ export default function ProjectsLayout({
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden">
+      {/* Header */}
       <div className="flex-shrink-0">        
-        <Header>
+        <Header projectId={projectId}>
           {/* Only show ProjectNav in header on desktop */}
           {!isMobile && (
             <div className="w-full max-w-md">
@@ -62,6 +67,8 @@ export default function ProjectsLayout({
           )}
         </Header>
       </div>
+      
+      {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
         <Sidebar 
           onCollapsedChange={setIsSidebarCollapsed} 

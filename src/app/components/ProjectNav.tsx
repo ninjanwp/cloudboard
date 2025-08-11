@@ -4,11 +4,14 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useProject } from "../context/ProjectContext";
+import { useAuth } from "../context/AuthContext";
 import { motion } from "framer-motion";
 import { FaClipboardList, FaGear, FaMessage, FaCalendar } from "react-icons/fa6";
+import { canAccessNavigation } from "../utils/projectUtils";
 
 export const ProjectNav = () => {
   const { currentProject } = useProject();
+  const { user } = useAuth();
   const pathname = usePathname();
 
   if (!currentProject) return null;
@@ -16,28 +19,38 @@ export const ProjectNav = () => {
   const projectId = currentProject.id;
   const isCurrentRoute = (route: string) => pathname === route;
 
-  const routes = [
+  const allRoutes = [
     {
       href: `/projects/${projectId}`,
       label: "Board",
       icon: <FaClipboardList className="w-4 h-4" />,
+      permission: "board", // Board access is always available to members
     },
     {
       href: `/projects/${projectId}/calendar`,
       label: "Calendar",
       icon: <FaCalendar className="w-4 h-4" />,
+      permission: "calendar",
     },
     {
       href: `/projects/${projectId}/chat`,
       label: "Chat",
       icon: <FaMessage className="w-4 h-4" />,
+      permission: "chat",
     },
     {
       href: `/projects/${projectId}/manage`,
       label: "Manage",
       icon: <FaGear className="w-4 h-4" />,
+      permission: "manage",
     },
   ];
+
+  // Filter routes based on user permissions
+  const routes = allRoutes.filter(route => {
+    if (route.permission === "board") return true; // Board is always accessible
+    return canAccessNavigation(currentProject, user?.email || "", route.permission);
+  });
 
   return (
     <nav className="flex">

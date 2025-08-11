@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
-import { FaBell, FaChevronDown } from "react-icons/fa6";
+import { FaBell, FaChevronDown, FaBrain, FaPlus } from "react-icons/fa6";
 import { SignInModal } from "./SignInModal";
+import { ProjectAI } from "./ProjectAI";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
@@ -14,19 +15,25 @@ import { UserAvatar } from "./UserAvatar";
 export const Header = ({
   children,
   extraPadding = false,
+  projectId,
 }: {
   children?: React.ReactNode;
   extraPadding?: boolean;
+  projectId?: string;
 }) => {
   const { user, handleSignOut, invitations } = useAuth();
   const [isSignInModalOpen, setIsSignInModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isAIOpen, setIsAIOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const [userDisplayName, setUserDisplayName] = useState<string>("");
 
   // Only hide logo on specific pages
   const hideLogo = pathname === "/login" || pathname === "/register";
+
+  // Check if we're on the main project board page (where Add Task should appear)
+  const isMainBoardPage = projectId && pathname === `/projects/${projectId}`;
 
   // Detect if on mobile viewport
   const [isMobile, setIsMobile] = useState(false);
@@ -76,9 +83,39 @@ export const Header = ({
           )}
         </div>
 
-        {/* Middle section: Project navigation */}
+        {/* Middle section: Project navigation and toolbar */}
         <div className={`flex-1 overflow-hidden ${isMobile ? "px-2" : "ml-4"}`}>
-          <div className="w-full max-w-fit mx-auto">{children}</div>
+          <div className="flex items-center gap-4 w-full max-w-fit mx-auto">
+            {children}
+            
+            {/* Project toolbar buttons - only show on project pages */}
+            {projectId && (
+              <div className="flex items-center gap-2">
+                {/* AI Assistant Button */}
+                <button
+                  onClick={() => setIsAIOpen(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-200 shadow-sm text-sm"
+                >
+                  <FaBrain className="text-xs" />
+                  {!isMobile && <span className="font-medium">AI</span>}
+                </button>
+
+                {/* Add Task Button - only show on main board page */}
+                {isMainBoardPage && (
+                  <button 
+                    className="flex items-center gap-2 px-3 py-1.5 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-all duration-200 font-medium text-sm"
+                    onClick={() => {
+                      // Trigger custom event that the CustomKanban can listen to
+                      window.dispatchEvent(new CustomEvent('openAddTaskModal'));
+                    }}
+                  >
+                    <FaPlus className="text-xs" />
+                    {!isMobile && <span>Task</span>}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right section: Notifications and user menu */}
@@ -114,7 +151,6 @@ export const Header = ({
                   displayName={userDisplayName}
                   size="sm"
                   className="w-7 h-7"
-                  userUid={user.uid}
                 />
                 <span className="text-sm hidden lg:inline">
                   {userDisplayName}
@@ -169,6 +205,15 @@ export const Header = ({
         isOpen={isSignInModalOpen}
         onClose={() => setIsSignInModalOpen(false)}
       />
+      
+      {/* AI Assistant Modal */}
+      {projectId && (
+        <ProjectAI
+          projectId={projectId}
+          isOpen={isAIOpen}
+          onClose={() => setIsAIOpen(false)}
+        />
+      )}
     </header>
   );
 };

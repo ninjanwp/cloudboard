@@ -2,15 +2,282 @@
 
 import { useAuth } from "../context/AuthContext";
 import { Header } from "../components/Header";
-import { useState, useEffect } from "react";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useState, useEffect, useRef } from "react";
+import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../../../firebase";
-import { FaChevronLeft } from "react-icons/fa6";
+import { FaChevronLeft, FaGear, FaUsers, FaFolderOpen, FaRightFromBracket } from "react-icons/fa6";
 import { useRouter } from "next/navigation";
 import { useTheme } from "../context/ThemeContext";
 import { ThemeName, themes } from "../types/theme";
 import Image from "next/image";
 import { AvatarColor, AvatarSettings, clearAvatarSettingsCache } from "../utils/avatarUtils";
+import { UserAvatar } from "../components/UserAvatar";
+import { Project } from "../context/ProjectContext";
+import { getUserProjectRole } from "../utils/projectUtils";
+
+// Avatar crop adjustment component
+const AvatarCropAdjuster = ({ 
+  photoURL, 
+  settings, 
+  onSettingsChange 
+}: { 
+  photoURL: string;
+  settings: AvatarSettings;
+  onSettingsChange: (settings: AvatarSettings) => void;
+}) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent text selection
+    setIsDragging(true);
+    setDragStart({ x: e.clientX, y: e.clientY });
+    
+    // Prevent text selection during drag
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !containerRef.current) return;
+    
+    e.preventDefault(); // Prevent default behavior
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const deltaX = e.clientX - dragStart.x;
+    const deltaY = e.clientY - dragStart.y;
+    
+    // Convert pixel movement to percentage (inverted for intuitive feel)
+    const percentX = -(deltaX / rect.width) * 100 * 0.5; // Reduced sensitivity
+    const percentY = -(deltaY / rect.height) * 100 * 0.5;
+    
+    // Calculate the boundaries based on zoom level
+    const zoom = settings.cropZoom || 1;
+    
+    // When zoomed in, we can pan more. When zoomed out (zoom = 1), we're constrained to 50% center
+    const panRange = Math.max(0, (zoom - 1) * 50);
+    const minBound = 50 - panRange;
+    const maxBound = 50 + panRange;
+    
+    const newCropX = Math.max(minBound, Math.min(maxBound, (settings.cropX || 50) + percentX));
+    const newCropY = Math.max(minBound, Math.min(maxBound, (settings.cropY || 50) + percentY));
+    
+    onSettingsChange({
+      ...settings,
+      cropX: newCropX,
+      cropY: newCropY
+    });
+    
+    setDragStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    // Restore text selection
+    document.body.style.userSelect = '';
+    document.body.style.webkitUserSelect = '';
+  };
+
+  // Global mouse event listeners for better drag experience
+  useEffect(() => {
+    if (isDragging) {
+      const handleGlobalMouseMove = (e: MouseEvent) => {
+        if (!containerRef.current) return;
+        
+        const rect = containerRef.current.getBoundingClientRect();
+        const deltaX = e.clientX - dragStart.x;
+        const deltaY = e.clientY - dragStart.y;
+        
+        const percentX = -(deltaX / rect.width) * 100 * 0.5;
+        const percentY = -(deltaY / rect.height) * 100 * 0.5;
+        
+        // Calculate the boundaries based on zoom level
+        const zoom = settings.cropZoom || 1;
+        
+        // When zoomed in, we can pan more. When zoomed out (zoom = 1), we're constrained to 50% center
+        // The available panning range increases with zoom
+        const panRange = Math.max(0, (zoom - 1) * 50); // At 1x zoom: 0 range, at 2x zoom: 50 range, at 3x zoom: 100 range
+        const minBound = 50 - panRange;
+        const maxBound = 50 + panRange;
+        
+        const newCropX = Math.max(minBound, Math.min(maxBound, (settings.cropX || 50) + percentX));
+        const newCropY = Math.max(minBound, Math.min(maxBound, (settings.cropY || 50) + percentY));
+        
+        onSettingsChange({
+          ...settings,
+          cropX: newCropX,
+          cropY: newCropY
+        });
+        
+        setDragStart({ x: e.clientX, y: e.clientY });
+      };
+
+      const handleGlobalMouseUp = () => {
+        setIsDragging(false);
+        document.body.style.userSelect = '';
+        document.body.style.webkitUserSelect = '';
+      };
+
+      document.addEventListener('mousemove', handleGlobalMouseMove);
+      document.addEventListener('mouseup', handleGlobalMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleGlobalMouseMove);
+        document.removeEventListener('mouseup', handleGlobalMouseUp);
+      };
+    }
+  }, [isDragging, dragStart, settings, onSettingsChange]);
+
+  const handleZoomChange = (zoom: number) => {
+    // Calculate the new boundaries for the zoom level
+    const panRange = Math.max(0, (zoom - 1) * 50);
+    const minBound = 50 - panRange;
+    const maxBound = 50 + panRange;
+    
+    // Constrain current crop position to new bounds
+    const constrainedCropX = Math.max(minBound, Math.min(maxBound, settings.cropX || 50));
+    const constrainedCropY = Math.max(minBound, Math.min(maxBound, settings.cropY || 50));
+    
+    onSettingsChange({
+      ...settings,
+      cropZoom: zoom,
+      cropX: constrainedCropX,
+      cropY: constrainedCropY
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Custom slider styles */}
+      <style jsx>{`
+        .slider::-webkit-slider-thumb {
+          appearance: none;
+          height: 16px;
+          width: 16px;
+          border-radius: 50%;
+          background: var(--accent);
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .slider::-moz-range-thumb {
+          height: 16px;
+          width: 16px;
+          border-radius: 50%;
+          background: var(--accent);
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .slider:focus {
+          outline: none;
+        }
+        
+        .slider:focus::-webkit-slider-thumb {
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+      `}</style>
+      
+      <div className="text-sm text-adaptive-secondary mb-2">Adjust Image Position & Zoom</div>
+      
+      {/* Preview with crop adjustment */}
+      <div 
+        ref={containerRef}
+        className={`relative w-32 h-32 mx-auto rounded-full overflow-hidden border-2 ${isDragging ? 'border-blue-500 cursor-grabbing' : 'border-[var(--border)] cursor-grab'} select-none`}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onDragStart={(e) => e.preventDefault()} // Prevent HTML5 drag
+        draggable={false}
+      >
+        <div 
+          className="w-full h-full relative pointer-events-none"
+          style={{
+            transform: `scale(${settings.cropZoom || 1})`,
+            transformOrigin: `${settings.cropX || 50}% ${settings.cropY || 50}%`
+          }}
+        >
+          <Image
+            src={photoURL}
+            alt="Avatar crop preview"
+            width={128}
+            height={128}
+            className="object-cover w-full h-full pointer-events-none select-none"
+            style={{
+              objectPosition: `${settings.cropX || 50}% ${settings.cropY || 50}%`
+            }}
+            unoptimized
+            draggable={false}
+          />
+        </div>
+        
+        {/* Center crosshair - only show when not dragging for cleaner look */}
+        {!isDragging && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-2 h-2 border border-white bg-black bg-opacity-50 rounded-full"></div>
+          </div>
+        )}
+        
+        {/* Drag indicator */}
+        {isDragging && (
+          <div className="absolute inset-0 bg-blue-500 bg-opacity-10 flex items-center justify-center pointer-events-none">
+            <div className="text-xs text-blue-600 font-medium bg-white bg-opacity-90 px-2 py-1 rounded">
+              Dragging...
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Instructions */}
+      <p className="text-xs text-adaptive-secondary text-center">
+        Drag to reposition • Use zoom slider to adjust size
+      </p>
+      
+      {/* Zoom control */}
+      <div className="space-y-2">
+        <label className="block text-sm text-adaptive-secondary">Zoom: {((settings.cropZoom || 1) * 100).toFixed(0)}%</label>
+        <div className="relative">
+          <input
+            type="range"
+            min="1"
+            max="3"
+            step="0.1"
+            value={settings.cropZoom || 1}
+            onChange={(e) => handleZoomChange(parseFloat(e.target.value))}
+            className="w-full h-2 bg-[var(--border)] rounded-lg appearance-none cursor-pointer slider"
+            style={{
+              background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${((settings.cropZoom || 1) - 1) / 2 * 100}%, var(--border) ${((settings.cropZoom || 1) - 1) / 2 * 100}%, var(--border) 100%)`
+            }}
+          />
+          {/* Slider track markers */}
+          <div className="flex justify-between text-xs text-adaptive-secondary mt-1 px-1">
+            <span>100%</span>
+            <span>200%</span>
+            <span>300%</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Reset button */}
+      <button
+        type="button"
+        onClick={() => onSettingsChange({
+          ...settings,
+          cropX: 50,
+          cropY: 50,
+          cropZoom: 1
+        })}
+        className="w-full px-3 py-2 text-sm bg-[var(--surface)] hover:bg-[var(--surface-hover)] border border-[var(--border)] rounded-lg transition-colors"
+      >
+        Reset Position
+      </button>
+    </div>
+  );
+};
 
 // Avatar customization types and preview component
 const AvatarPreview = ({ 
@@ -58,14 +325,25 @@ const AvatarPreview = ({
     if (settings.style === "photo" && photoURL) {
       return (
         <div className="w-12 h-12 rounded-full overflow-hidden relative">
-          <Image
-            src={photoURL}
-            alt="Avatar preview"
-            width={48}
-            height={48}
-            className="object-cover"
-            unoptimized
-          />
+          <div 
+            className="w-full h-full relative"
+            style={{
+              transform: `scale(${settings.cropZoom || 1})`,
+              transformOrigin: `${settings.cropX || 50}% ${settings.cropY || 50}%`
+            }}
+          >
+            <Image
+              src={photoURL}
+              alt="Avatar preview"
+              width={48}
+              height={48}
+              className="object-cover w-full h-full"
+              style={{
+                objectPosition: `${settings.cropX || 50}% ${settings.cropY || 50}%`
+              }}
+              unoptimized
+            />
+          </div>
         </div>
       );
     }
@@ -95,7 +373,7 @@ const AvatarPreview = ({
 
 export default function Settings() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, leaveProject } = useAuth();
   const { theme, setTheme } = useTheme();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -103,12 +381,19 @@ export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"success" | "error" | null>(null);
   
+  // Projects list
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+  
   // Avatar settings
   const [avatarSettings, setAvatarSettings] = useState<AvatarSettings>({
     style: "monogram",
     color: "auto",
     showFullName: false,
-    useCustomColor: false
+    useCustomColor: false,
+    cropX: 50,
+    cropY: 50,
+    cropZoom: 1
   });
 
   useEffect(() => {
@@ -127,13 +412,54 @@ export default function Settings() {
             style: data.avatarSettings.style || "monogram",
             color: data.avatarSettings.color || "auto",
             showFullName: data.avatarSettings.showFullName || false,
-            useCustomColor: data.avatarSettings.useCustomColor || false
+            useCustomColor: data.avatarSettings.useCustomColor || false,
+            cropX: data.avatarSettings.cropX || 50,
+            cropY: data.avatarSettings.cropY || 50,
+            cropZoom: data.avatarSettings.cropZoom || 1
           });
         }
       }
     };
     fetchUserProfile();
   }, [user]);
+
+  // Load user's projects
+  useEffect(() => {
+    if (!user?.email) return;
+
+    const projectsRef = collection(db, "projects");
+    const q = query(projectsRef, where("members", "array-contains", user.email));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const projectsData: Project[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        projectsData.push({ 
+          id: doc.id, 
+          ...data,
+          createdAt: data.createdAt // Keep as Timestamp
+        } as Project);
+      });
+      setProjects(projectsData);
+      setLoadingProjects(false);
+    }, (error) => {
+      console.error("Error fetching projects:", error);
+      setLoadingProjects(false);
+    });
+
+    return () => unsubscribe();
+  }, [user?.email]);
+
+  const handleLeaveProject = async (projectId: string, projectName: string) => {
+    if (window.confirm(`Are you sure you want to leave "${projectName}"? You will need to be invited again to rejoin.`)) {
+      try {
+        await leaveProject(projectId);
+      } catch (error) {
+        console.error("Error leaving project:", error);
+        // Could add error handling UI here
+      }
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -256,6 +582,85 @@ export default function Settings() {
               </form>
             </div>
 
+            {/* Projects Section */}
+            <div className="bg-[var(--surface)] rounded-lg p-6">
+              <h2 className="text-lg font-semibold text-adaptive mb-4 flex items-center gap-2">
+                <FaFolderOpen className="text-[var(--accent)]" />
+                Your Projects
+              </h2>
+              {loadingProjects ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent)] mx-auto"></div>
+                  <p className="text-adaptive-secondary mt-2">Loading projects...</p>
+                </div>
+              ) : projects.length === 0 ? (
+                <div className="text-center py-8">
+                  <FaFolderOpen className="text-4xl text-adaptive-secondary mx-auto mb-3" />
+                  <p className="text-adaptive-secondary">You're not a member of any projects yet.</p>
+                  <button
+                    onClick={() => router.push('/projects')}
+                    className="mt-3 px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors"
+                  >
+                    Create a Project
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {projects.map((project) => {
+                    const userRole = getUserProjectRole(project, user?.email || "");
+                    return (
+                      <div
+                        key={project.id}
+                        className="flex items-center justify-between p-4 bg-[var(--background)] rounded-lg border border-[var(--border)] hover:border-[var(--accent)]/30 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center">
+                            <FaFolderOpen className="text-[var(--accent)]" />
+                          </div>
+                          <div>
+                            <h3 className="font-medium text-[var(--text)]">{project.name}</h3>
+                            <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                              <span>{project.members.length} member{project.members.length !== 1 ? 's' : ''}</span>
+                              {userRole && (
+                                <>
+                                  <span>•</span>
+                                  <span className="capitalize">{userRole}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => router.push(`/projects/${project.id}`)}
+                            className="px-3 py-1.5 bg-[var(--accent)] text-white rounded text-sm hover:bg-[var(--accent-hover)] transition-colors"
+                          >
+                            Open
+                          </button>
+                          {userRole !== "owner" && (
+                            <button
+                              onClick={() => handleLeaveProject(project.id, project.name)}
+                              className="px-3 py-1.5 text-red-400 border border-red-400/30 rounded text-sm hover:bg-red-400/10 transition-colors"
+                            >
+                              Leave
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                    <button
+                      onClick={() => router.push('/projects')}
+                      className="w-full px-4 py-2 border border-[var(--border)] text-[var(--text)] rounded-lg hover:bg-[var(--surface)] transition-colors"
+                    >
+                      Create New Project
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Avatar Customization Section */}
             <div className="bg-[var(--surface)] rounded-lg p-6">
               <h2 className="text-lg font-semibold text-adaptive mb-4">Avatar Settings</h2>
@@ -313,6 +718,26 @@ export default function Settings() {
                   </button>
                 </div>
               </div>
+
+              {/* Photo Crop Adjustment - only show if using photo and photoURL exists */}
+              {avatarSettings.style === "photo" && photoURL.trim() && (
+                <div className="mb-6">
+                  <AvatarCropAdjuster
+                    photoURL={photoURL}
+                    settings={avatarSettings}
+                    onSettingsChange={setAvatarSettings}
+                  />
+                </div>
+              )}
+
+              {/* Message when photo style is selected but no photo URL */}
+              {avatarSettings.style === "photo" && !photoURL.trim() && (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    Add a profile photo URL above to use the photo avatar style and adjust cropping.
+                  </p>
+                </div>
+              )}
 
               {/* Color Selection - only show if not using photo */}
               {avatarSettings.style !== "photo" && (

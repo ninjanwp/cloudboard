@@ -5,14 +5,32 @@ import { doc, onSnapshot, Timestamp } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { usePathname } from "next/navigation";
 
+export type ProjectRole = "owner" | "administrator" | "member";
+
+export type ProjectMember = {
+  email: string;
+  role: ProjectRole;
+  joinedAt: string;
+};
+
+export type NavigationPermissions = {
+  manage: ProjectRole[]; // Who can access manage page
+  chat: ProjectRole[]; // Who can access chat
+  calendar: ProjectRole[]; // Who can access calendar
+  [key: string]: ProjectRole[]; // Allow for future navigation items
+};
+
 export type Project = {
   id: string;
   name: string;
   owner: string;
   ownerEmail: string;
   members: string[];
+  memberRoles?: ProjectMember[]; // New field for detailed member info with roles
   icon?: string;
   createdAt: Timestamp;
+  openAIApiKey?: string; // Move API key to project level
+  navigationPermissions?: NavigationPermissions; // Navigation access control
 };
 
 type ProjectContextType = {
