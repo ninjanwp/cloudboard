@@ -7,8 +7,7 @@ import { FiChevronLeft, FiChevronRight, FiCalendar, FiClock, FiPlus, FiX } from 
 import { collection, onSnapshot, addDoc } from "firebase/firestore";
 import { db } from "../../../firebase";
 import { useAuth } from "../context/AuthContext";
-import { getUserDisplayName } from "../utils/userUtils";
-import { batchGetUserData, preloadProjectUsers } from "../utils/userCache";
+import { batchGetUserData } from "../utils/userCache";
 import { UserAvatar } from "./UserAvatar";
 
 type CalendarTask = {
@@ -95,6 +94,7 @@ export const Calendar = ({ projectId, boardId }: { projectId: string; boardId: s
     if (tasks.length > 0) {
       loadDisplayNames();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tasks.length]); // Changed dependency to tasks.length to avoid infinite loops
 
     // Create task function

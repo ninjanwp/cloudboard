@@ -1,4 +1,4 @@
-import { Project, ProjectRole, ProjectMember, NavigationPermissions } from "../context/ProjectContext";
+import { Project, ProjectRole, NavigationPermissions } from "../context/ProjectContext";
 
 export const getUserProjectRole = (project: Project, userEmail: string): ProjectRole | null => {
   if (!userEmail) return null;

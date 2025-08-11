@@ -193,64 +193,73 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const acceptInvitation = async (invitationId: string) => {
     try {
       if (!user?.email) {
-        console.error("No user email found");
-        return;
+        throw new Error("No user email found");
       }
+
+      console.log("Starting invitation acceptance for:", { invitationId, userEmail: user.email });
 
       const invitationRef = doc(db, "invitations", invitationId);
       const invitationSnap = await getDoc(invitationRef);
 
       if (!invitationSnap.exists()) {
-        console.error("Invitation not found");
-        return;
+        throw new Error("Invitation not found");
       }
 
       const invitation = invitationSnap.data() as ProjectInvitation;
       console.log("Processing invitation:", invitation);
 
-      if (
-        invitation.status !== "pending" ||
-        invitation.toEmail !== user.email
-      ) {
-        console.error("Invalid invitation status or recipient");
+      if (invitation.status !== "pending" || invitation.toEmail !== user.email) {
         throw new Error("Invalid invitation");
       }
 
-      // First update the invitation status
-      await updateDoc(invitationRef, {
-        status: "accepted",
-      });
+      // Update invitation status first
+      console.log("DEBUG: About to update invitation status");
+      await updateDoc(invitationRef, { status: "accepted" });
+      console.log("DEBUG: Successfully updated invitation status");
 
-      // Then update the project members
+      // Get current project data
       const projectRef = doc(db, "projects", invitation.projectId);
-      
-      // Get current project data to update memberRoles
       const projectSnap = await getDoc(projectRef);
-      if (projectSnap.exists()) {
-        const projectData = projectSnap.data();
-        const currentMemberRoles = projectData.memberRoles || [];
-        
-        const updatedMemberRoles = [
-          ...currentMemberRoles,
-          {
-            email: user.email || "",
-            role: "member",
-            joinedAt: new Date().toISOString()
-          }
-        ];
-        
-        await updateDoc(projectRef, {
-          members: arrayUnion(user.email),
-          memberRoles: updatedMemberRoles
-        });
-      } else {
-        // Fallback for older projects without memberRoles
-        await updateDoc(projectRef, {
-          members: arrayUnion(user.email),
-        });
+      
+      if (!projectSnap.exists()) {
+        throw new Error("Project not found");
       }
 
-      console.log("Successfully accepted invitation");
+      const projectData = projectSnap.data();
+      console.log("DEBUG: Current project data:", projectData);
+      
+      // Check if user is already a member
+      if (projectData.members && projectData.members.includes(user.email)) {
+        console.log("User is already a member");
+        return;
+      }
+
+      // Prepare new memberRoles entry
+      const newMemberRole = {
+        email: user.email,
+        role: "member",
+        joinedAt: new Date().toISOString()
+      };
+
+      console.log("DEBUG: About to update project with:", {
+        members: arrayUnion(user.email),
+        memberRoles: arrayUnion(newMemberRole)
+      });
+
+      // Update project with new member and role using arrayUnion for both
+      try {
+        console.log("DEBUG: Starting project update...");
+        await updateDoc(projectRef, {
+          members: arrayUnion(user.email),
+          memberRoles: arrayUnion(newMemberRole)
+        });
+        console.log("DEBUG: Project update successful!");
+      } catch (projectError) {
+        console.error("DEBUG: Project update failed:", projectError);
+        throw projectError;
+      }
+
+      console.log("Successfully accepted invitation and added user to project");
     } catch (error) {
       console.error("Error accepting invitation:", error);
       throw error;

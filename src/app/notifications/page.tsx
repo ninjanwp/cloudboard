@@ -12,6 +12,7 @@ export default function NotificationsPage() {
   const router = useRouter(); // Add this
   const { invitations, acceptInvitation, declineInvitation } = useAuth();
   const [senderNames, setSenderNames] = useState<{ [email: string]: string }>({});
+  const [processing, setProcessing] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSenderNames = async () => {
@@ -31,6 +32,34 @@ export default function NotificationsPage() {
     };
     fetchSenderNames();
   }, [invitations]);
+
+  const handleAcceptInvitation = async (invitationId: string) => {
+    try {
+      setProcessing(invitationId);
+      console.log("Attempting to accept invitation:", invitationId);
+      await acceptInvitation(invitationId);
+      console.log("Invitation accepted successfully");
+      // Show success message or redirect
+      router.push('/projects'); // Redirect to projects page
+    } catch (error) {
+      console.error("Failed to accept invitation:", error);
+      alert("Failed to accept invitation. Please try again.");
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleDeclineInvitation = async (invitationId: string) => {
+    try {
+      setProcessing(invitationId);
+      await declineInvitation(invitationId);
+    } catch (error) {
+      console.error("Failed to decline invitation:", error);
+      alert("Failed to decline invitation. Please try again.");
+    } finally {
+      setProcessing(null);
+    }
+  };
 
   return (
     <>
@@ -71,16 +100,18 @@ export default function NotificationsPage() {
                     </div>
                     <div className="flex gap-2">
                       <button
-                        onClick={() => acceptInvitation(invitation.id)}
-                        className="p-2 bg-green-500 rounded hover:bg-green-600 text-white"
+                        onClick={() => handleAcceptInvitation(invitation.id)}
+                        disabled={processing === invitation.id}
+                        className="p-2 bg-green-500 rounded hover:bg-green-600 text-white disabled:opacity-50"
                       >
-                        <FaCheck />
+                        {processing === invitation.id ? "..." : <FaCheck />}
                       </button>
                       <button
-                        onClick={() => declineInvitation(invitation.id)}
-                        className="p-2 bg-red-500 rounded hover:bg-red-600 text-white"
+                        onClick={() => handleDeclineInvitation(invitation.id)}
+                        disabled={processing === invitation.id}
+                        className="p-2 bg-red-500 rounded hover:bg-red-600 text-white disabled:opacity-50"
                       >
-                        <FaX />
+                        {processing === invitation.id ? "..." : <FaX />}
                       </button>
                     </div>
                   </div>

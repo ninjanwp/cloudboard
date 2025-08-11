@@ -5,7 +5,7 @@ import { Project, ProjectMember } from "../../../context/ProjectContext";
 import { useState, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { useProject } from "../../../context/ProjectContext";
-import { doc, getDoc, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../../../../firebase";
 import { FaUserPlus, FaUserMinus, FaCrown, FaTrash, FaShield, FaRobot, FaEye, FaEyeSlash, FaGear, FaMessage, FaCalendar } from "react-icons/fa6";
 import { useParams, useRouter } from 'next/navigation';
@@ -25,7 +25,7 @@ export default function ProjectManagePage() {
   const { user, inviteUserToProject, removeUserFromProject, deleteProject, leaveProject } = useAuth();
   const { currentProject, setCurrentProject } = useProject();
   const [members, setMembers] = useState<string[]>([]);
-  const [memberRoles, setMemberRoles] = useState<ProjectMember[]>([]);
+  const [, setMemberRoles] = useState<ProjectMember[]>([]);
   const [newMemberEmail, setNewMemberEmail] = useState("");
   const [hasAdminPermissions, setHasAdminPermissions] = useState(false);
   const [userRole, setUserRole] = useState<string>("");

@@ -5,13 +5,12 @@ import { Header } from "../components/Header";
 import { useState, useEffect, useRef } from "react";
 import { doc, getDoc, setDoc, collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../../../firebase";
-import { FaChevronLeft, FaGear, FaUsers, FaFolderOpen, FaRightFromBracket } from "react-icons/fa6";
+import { FaChevronLeft, FaFolderOpen } from "react-icons/fa6";
 import { useRouter } from "next/navigation";
 import { useTheme } from "../context/ThemeContext";
 import { ThemeName, themes } from "../types/theme";
 import Image from "next/image";
 import { AvatarColor, AvatarSettings, clearAvatarSettingsCache } from "../utils/avatarUtils";
-import { UserAvatar } from "../components/UserAvatar";
 import { Project } from "../context/ProjectContext";
 import { getUserProjectRole } from "../utils/projectUtils";
 
@@ -596,7 +595,7 @@ export default function Settings() {
               ) : projects.length === 0 ? (
                 <div className="text-center py-8">
                   <FaFolderOpen className="text-4xl text-adaptive-secondary mx-auto mb-3" />
-                  <p className="text-adaptive-secondary">You're not a member of any projects yet.</p>
+                  <p className="text-adaptive-secondary">You&apos;re not a member of any projects yet.</p>
                   <button
                     onClick={() => router.push('/projects')}
                     className="mt-3 px-4 py-2 bg-[var(--accent)] text-white rounded-lg hover:bg-[var(--accent-hover)] transition-colors"

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaPaperPlane, FaRobot, FaUser, FaSpinner, FaBrain, FaXmark } from "react-icons/fa6";
+import { FaPaperPlane, FaRobot, FaSpinner, FaBrain, FaXmark } from "react-icons/fa6";
 import { UserAvatar } from "./UserAvatar";
 import { useAuth } from "../context/AuthContext";
 import { getAIResponse } from "../utils/aiService";
@@ -228,7 +228,7 @@ export const ProjectAI: React.FC<ProjectAIProps> = ({ projectId, isOpen, onClose
             </button>
           </div>
           <div className="text-xs text-[var(--text-secondary)] mt-2">
-            Ask questions like: "What tasks are overdue?", "Who is working on what?", "What's our progress this week?"
+            Ask questions like: &quot;What tasks are overdue?&quot;, &quot;Who is working on what?&quot;, &quot;What&apos;s our progress this week?&quot;
           </div>
         </form>
       </motion.div>

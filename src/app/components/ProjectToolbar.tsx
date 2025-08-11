@@ -11,8 +11,7 @@ interface ProjectToolbarProps {
 }
 
 export const ProjectToolbar: React.FC<ProjectToolbarProps> = ({ 
-  projectId, 
-  className = "" 
+  projectId
 }) => {
   const [isAIOpen, setIsAIOpen] = useState(false);
   const pathname = usePathname();

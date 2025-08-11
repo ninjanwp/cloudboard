@@ -24,8 +24,7 @@ import { Modal } from "./Modal";
 import { useAuth } from "../context/AuthContext";
 import classNames from "classnames";
 import { FaLink } from "react-icons/fa6";
-import { getUserDisplayName } from "../utils/userUtils";
-import { batchGetUserData, preloadProjectUsers } from "../utils/userCache";
+import { batchGetUserData } from "../utils/userCache";
 import { createLog } from "../utils/logUtils";
 import { UserAvatar } from "./UserAvatar";
 
