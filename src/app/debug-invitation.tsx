@@ -156,7 +156,7 @@ export default function DebugInvitation() {
 
         <div className="mt-4 text-sm text-[var(--text-secondary)]">
           <p>Current user: {user?.email || 'Not logged in'}</p>
-          <p>Instructions: Enter a project ID where you should be able to join, then click "Test Firestore Rules"</p>
+          <p>Instructions: Enter a project ID where you should be able to join, then click &quot;Test Firestore Rules&quot;</p>
         </div>
       </div>
     </div>
