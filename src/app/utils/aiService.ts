@@ -28,6 +28,9 @@ export interface ProjectContext {
     priority?: "low" | "medium" | "high";
     dueDate?: string;
     date?: string;
+    duration?: number;
+    order?: number;
+    lastModified?: string;
     createdBy: {
       uid: string;
       email: string;
@@ -102,6 +105,9 @@ export async function gatherProjectContext(projectId: string): Promise<ProjectCo
           priority: cardData.priority,
           dueDate: cardData.dueDate,
           date: cardData.date,
+          duration: cardData.duration,
+          order: cardData.order,
+          lastModified: cardData.lastModified,
           createdBy: cardData.createdBy || { uid: "", email: "" },
           createdAt: cardData.createdAt || "",
           tags: cardData.tags
@@ -152,7 +158,7 @@ export async function callOpenAI(
   context: ProjectContext, 
   apiKey: string
 ): Promise<string> {
-  const systemPrompt = `You are a helpful project management AI assistant. You have access to complete information about a project including all tasks, boards, team members, and assignments.
+  const systemPrompt = `You are a helpful project management AI assistant. You have access to complete information about a project including all tasks, boards, team members, assignments, and scheduling.
 
 Project Information:
 - Name: ${context.project.name}
@@ -163,15 +169,63 @@ Project Information:
 Boards: ${context.boards.map(b => `${b.name} (columns: ${b.columns.join(", ")})`).join("; ")}
 
 Tasks (${context.tasks.length} total):
-${context.tasks.map(task => 
-  `- "${task.title}" in ${task.boardName}/${task.column}${
-    task.assignment?.assignedTo ? ` (assigned to ${task.assignment.assignedTo})` : ""
-  }${task.dueDate ? ` (due: ${task.dueDate})` : ""}${
-    task.priority ? ` [${task.priority} priority]` : ""
-  }${task.description ? `\n  Description: ${task.description}` : ""}`
-).join("\n")}
+${context.tasks.map(task => {
+  let taskInfo = `- "${task.title}" in ${task.boardName}/${task.column}`;
+  
+  // Add assignment info
+  if (task.assignment?.assignedTo) {
+    taskInfo += ` (assigned to ${task.assignment.assignedTo})`;
+  }
+  
+  // Add scheduling info
+  if (task.date) {
+    taskInfo += ` (scheduled: ${task.date})`;
+  }
+  
+  // Add due date if different from scheduled date
+  if (task.dueDate && task.dueDate !== task.date) {
+    taskInfo += ` (due: ${task.dueDate})`;
+  }
+  
+  // Add priority
+  if (task.priority) {
+    taskInfo += ` [${task.priority} priority]`;
+  }
+  
+  // Add duration if available
+  if (task.duration) {
+    taskInfo += ` (${task.duration}min)`;
+  }
+  
+  // Add creation info
+  taskInfo += ` [created by ${task.createdBy.email}`;
+  if (task.createdAt) {
+    const createdDate = new Date(task.createdAt).toLocaleDateString();
+    taskInfo += ` on ${createdDate}`;
+  }
+  taskInfo += `]`;
+  
+  // Add description on new line if available
+  if (task.description) {
+    taskInfo += `\n  Description: ${task.description}`;
+  }
+  
+  // Add tags if available
+  if (task.tags && task.tags.length > 0) {
+    taskInfo += `\n  Tags: ${task.tags.join(", ")}`;
+  }
+  
+  return taskInfo;
+}).join("\n")}
 
-Answer questions about the project based on this information. Be helpful, concise, and provide specific details when available. If asked about progress, analyze the task statuses. If asked about workload, look at assignments. If asked about deadlines, check due dates.`;
+Additional Context:
+- Tasks with dates are scheduled for specific days
+- Task durations are in minutes
+- Current date context: ${new Date().toISOString().split('T')[0]}
+- You can analyze workload by date, person, or board
+- You can identify overdue items, upcoming deadlines, and scheduling conflicts
+
+Answer questions about the project based on this comprehensive information. Be helpful, concise, and provide specific details when available. When discussing dates or scheduling, always reference the actual date values from the tasks.`;
 
   const userPrompt = question;
 
